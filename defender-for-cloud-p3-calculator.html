@@ -1,0 +1,2208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Microsoft Defender for Cloud — Pre-Purchase Plan calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,420;9..144,520;9..144,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAF7F0; --paper-deep:#F1ECE0; --card:#FFFDF8;
+  --ink:#23272E; --ink-soft:#5C6470; --ink-faint:#8B9099;
+  --hair:#E3DCCC; --hair-strong:#D4CBB6;
+
+  --s1:#0F6CBD;  /* posture      */
+  --s2:#038387;  /* workloads    */
+  --s3:#8661C5;  /* scope        */
+  --s4:#B7791F;  /* commercials  */
+  --s5:#107C41;  /* analysis     */
+  --neg:#C2410C;
+  --cad:#D52B1E; /* Canadian red */
+  --usa:#0A3161; /* US flag blue */
+  --unused:#8E7CA6; /* expiring commit — deliberately distinct from the empty track */
+
+  --display:"Fraunces",Georgia,serif;
+  --body:"Public Sans","Segoe UI",system-ui,sans-serif;
+  --num:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;   /* all figures */
+  --mono:"IBM Plex Mono","Cascadia Mono",Consolas,monospace;
+  --ease:cubic-bezier(.33,.08,.24,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+html,body{margin:0;padding:0}
+body{font-family:var(--body);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(1100px 500px at 88% -120px, rgba(15,108,189,.05), transparent 60%),
+    radial-gradient(900px 480px at -8% 102%, rgba(16,124,65,.06), transparent 60%)}
+::selection{background:rgba(3,131,135,.16)}
+.page{position:relative;max-width:1120px;margin:0 auto;padding:0 30px 90px}
+
+/* every number in the document uses this */
+.n,.num,td,th,.dv,.bv,.mp,.gsum,.rc,input[type=number]{font-variant-numeric:tabular-nums}
+
+/* ═══════ MINI-BAR ═══════ */
+.minibar{position:fixed;top:0;left:0;right:0;z-index:70;background:color-mix(in srgb,var(--card) 92%,transparent);
+  backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--hair);transform:translateY(-100%);transition:transform .35s var(--ease)}
+.minibar.show{transform:none}
+.minibar .mb-in{max-width:1120px;margin:0 auto;padding:9px 30px;display:flex;align-items:center;gap:18px}
+.mb-mark{font-family:var(--mono);font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-faint);
+  display:flex;align-items:center;gap:9px;flex:none}
+.mb-mark .sq{width:8px;height:8px;border-radius:2px;background:linear-gradient(135deg,var(--s1),var(--s5))}
+.mb-sep{flex:1}
+.mb-stats{display:flex;align-items:center;flex:none}
+.mb-stat{display:flex;align-items:baseline;gap:7px;padding:0 15px;border-left:1px solid var(--hair)}
+.mb-stat:first-child{border-left:none}
+.mb-stat .v{font-family:var(--num);font-weight:600;font-size:15px;letter-spacing:-.2px;color:var(--mc,var(--ink));
+  line-height:1;font-variant-numeric:tabular-nums}
+.mb-stat .l{font-family:var(--mono);font-size:9px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
+.minibar .mb-prog{position:absolute;bottom:-1px;left:0;height:2px;width:0;
+  background:linear-gradient(90deg,var(--s1),var(--s2) 40%,var(--s3) 70%,var(--s5));transition:width .12s linear}
+@media(max-width:980px){.mb-stat:nth-child(n+3){display:none}}
+@media(max-width:640px){.mb-stat:nth-child(n+2){display:none}}
+
+/* ═══════ RAIL ═══════ */
+.rail{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:8px}
+.rail button{display:flex;align-items:center;gap:9px;flex-direction:row-reverse;border:none;background:none;cursor:pointer;padding:3px;font-family:var(--mono)}
+.rail .dot{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--hair-strong);background:var(--card);
+  font-size:10px;font-weight:600;color:var(--ink-faint);display:flex;align-items:center;justify-content:center;
+  transition:all .3s var(--ease);font-family:var(--num)}
+.rail .lbl{font-size:10px;color:var(--ink-faint);opacity:0;transform:translateX(6px);transition:all .3s var(--ease);
+  white-space:nowrap;background:var(--card);border:1px solid var(--hair);padding:4px 9px;border-radius:6px;
+  box-shadow:0 2px 8px -5px rgba(35,39,46,.3)}
+.rail button:hover .lbl,.rail button.active .lbl{opacity:1;transform:none}
+.rail button.active .dot{background:var(--rc);border-color:var(--rc);color:#fff;box-shadow:0 0 0 4px color-mix(in srgb,var(--rc) 15%,transparent)}
+@media(max-width:1320px){.rail{display:none}}
+
+/* ═══════ MASTHEAD ═══════ */
+header.masthead{padding:78px 0 10px;max-width:900px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:2.4px;text-transform:uppercase;
+  color:var(--ink-soft);display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.eyebrow::before{content:'';width:34px;height:1.5px;background:var(--ink)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,4.8vw,52px);line-height:1.05;letter-spacing:-.6px;margin:0 0 22px}
+h1 span.hl{background:linear-gradient(100deg,var(--s1),var(--s2) 50%,var(--s5));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.standfirst{font-size:17px;line-height:1.68;color:var(--ink-soft);max-width:70ch;margin:0}
+.standfirst strong{color:var(--ink);font-weight:650}
+.analogy{margin-top:22px;max-width:74ch;border:1px solid var(--hair);border-left:3px solid var(--s4);border-radius:13px;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--s4) 7%,var(--card)),var(--card) 62%);padding:18px 20px;
+  box-shadow:0 10px 26px -22px rgba(35,39,46,.4)}
+.analogy .ah{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--s4);
+  margin-bottom:9px;display:flex;align-items:center;gap:8px}
+.analogy .ah::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--s4) 22%,var(--hair))}
+.analogy p{margin:0;font-size:15px;line-height:1.72;color:var(--ink-soft)}
+.analogy p b{color:var(--ink);font-weight:650}
+
+/* ═══════ BOTTOM LINE ═══════ */
+.bl{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:32px}
+@media(max-width:860px){.bl{grid-template-columns:1fr}}
+.blc{border:1px solid var(--hair);border-radius:15px;background:var(--card);padding:20px;position:relative;overflow:hidden;
+  box-shadow:0 2px 12px -8px rgba(35,39,46,.24)}
+.blc .bt{font-family:var(--mono);font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--c);
+  display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.blc .bt i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none}
+.blc .bfig{font-family:var(--num);font-weight:600;font-size:34px;letter-spacing:-1px;color:var(--c);line-height:1;
+  margin-bottom:11px;font-variant-numeric:tabular-nums}
+.blc h3{margin:0 0 8px;font-size:15px;font-weight:700;letter-spacing:-.15px;line-height:1.25}
+.blc p{margin:0;font-size:12.9px;line-height:1.6;color:var(--ink-soft)}
+.blc p b{color:var(--ink);font-weight:650}
+
+/* ═══════ SECTION CHROME ═══════ */
+section.sec{padding:62px 0 4px;opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+section.sec.in{opacity:1;transform:none}
+.kicker{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+  color:var(--c);display:flex;align-items:center;gap:11px;margin-bottom:13px}
+.kicker .dotmark{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+.kicker::after{content:'';flex:1;height:1px;background:var(--hair)}
+section.sec h2{font-family:var(--display);font-weight:600;font-size:clamp(25px,3.4vw,36px);line-height:1.1;
+  letter-spacing:-.4px;margin:0 0 12px;max-width:30ch}
+.sub{font-size:15.5px;line-height:1.68;color:var(--ink-soft);max-width:74ch;margin:0 0 22px}
+.sub b,.sub strong{color:var(--ink);font-weight:650}
+.note{font-family:var(--mono);font-size:11px;line-height:1.65;color:var(--ink-faint);margin-top:14px;
+  padding:11px 14px;border:1px dashed var(--hair-strong);border-radius:10px;background:color-mix(in srgb,var(--paper-deep) 55%,transparent)}
+.note b{color:var(--ink-soft);font-weight:600}
+.note a{color:var(--s1);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--s1) 35%,transparent)}
+
+/* ═══════ SERVICE EXPLORER ═══════ */
+.explorer{border:1px solid var(--hair-strong);border-radius:17px;background:var(--card);overflow:hidden;
+  box-shadow:0 16px 40px -34px rgba(35,39,46,.5)}
+.exnav{padding:14px 16px 0;border-bottom:1px solid var(--hair);background:color-mix(in srgb,var(--paper-deep) 45%,transparent)}
+.exnav .nl{font-family:var(--mono);font-size:8.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-faint);
+  margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.exnav .nl svg{width:11px;height:11px;stroke:var(--ink-faint);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.segbar{display:flex;gap:4px;padding:4px;border:1px solid var(--hair-strong);border-radius:12px;background:var(--card);
+  overflow-x:auto;margin-bottom:14px}
+.segbar button{border:none;background:transparent;padding:9px 15px;border-radius:9px;cursor:pointer;white-space:nowrap;
+  font-family:var(--body);font-size:12.6px;font-weight:600;letter-spacing:-.1px;color:var(--ink-soft);
+  transition:all .2s var(--ease);display:inline-flex;align-items:center;gap:8px;flex:none}
+.segbar button .cnt{font-family:var(--num);font-size:10px;font-weight:600;padding:2px 6px;border-radius:999px;
+  background:var(--paper-deep);color:var(--ink-faint);transition:all .2s var(--ease);min-width:19px;text-align:center}
+.segbar button:hover{background:color-mix(in srgb,var(--tc) 9%,transparent);color:var(--tc)}
+.segbar button.on{background:var(--tc);color:#fff;box-shadow:0 5px 14px -8px var(--tc)}
+.segbar button.on .cnt{background:rgba(255,255,255,.24);color:#fff}
+.segbar button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.pillrow{display:flex;flex-wrap:wrap;gap:7px;padding:14px 16px;border-bottom:1px solid var(--hair)}
+.pillrow button{font-family:var(--body);font-size:12.4px;font-weight:500;padding:7px 13px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--hair-strong);background:var(--paper-deep);color:var(--ink-soft);transition:all .2s var(--ease)}
+.pillrow button:hover{border-color:var(--tc);color:var(--tc);background:color-mix(in srgb,var(--tc) 7%,var(--card))}
+.pillrow button.on{background:var(--tc);border-color:var(--tc);color:#fff;font-weight:600}
+.spot{display:grid;grid-template-columns:1fr 288px;gap:26px;padding:26px}
+@media(max-width:860px){.spot{grid-template-columns:1fr;gap:20px}}
+.dfam{font-family:var(--mono);font-size:8.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--c);
+  display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.dfam .dm{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.dname{font-family:var(--display);font-weight:600;font-size:25px;letter-spacing:-.4px;line-height:1.15;margin:0 0 11px}
+.dshort{font-size:13.8px;line-height:1.64;color:var(--ink-soft);margin:0}
+.dshort b{color:var(--ink);font-weight:650}
+.dsec{font-family:var(--mono);font-size:8.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-faint);
+  display:flex;align-items:center;gap:9px;margin:20px 0 11px}
+.dsec::after{content:'';flex:1;height:1px;background:var(--hair)}
+.caps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:640px){.caps{grid-template-columns:1fr}}
+.cap{display:flex;align-items:flex-start;gap:9px;font-size:12.6px;line-height:1.45;color:var(--ink-soft)}
+.cap i{width:15px;height:15px;border-radius:50%;background:color-mix(in srgb,var(--c) 14%,transparent);flex:none;margin-top:1px;
+  display:flex;align-items:center;justify-content:center}
+.cap i::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--c)}
+.dbill{border-left:2.5px solid var(--c);padding:3px 0 3px 13px;font-size:12.8px;line-height:1.6;color:var(--ink-soft)}
+.dbill b{color:var(--ink);font-weight:650}
+.spotside{border-left:1px solid var(--hair);padding-left:24px;display:flex;flex-direction:column}
+@media(max-width:860px){.spotside{border-left:none;padding-left:0;border-top:1px solid var(--hair);padding-top:20px}}
+.sslab{font-family:var(--mono);font-size:8.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px}
+.bigprice{font-family:var(--num);font-weight:600;font-size:42px;letter-spacing:-1.4px;color:var(--c);line-height:.95;
+  font-variant-numeric:tabular-nums}
+.bigunit{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:9px;line-height:1.55}
+.countbox{margin-top:22px;padding:13px 15px;border:1px solid var(--hair);border-radius:11px;
+  background:color-mix(in srgb,var(--c) 5%,var(--paper-deep))}
+.countbox .cx{font-size:12.5px;line-height:1.55;color:var(--ink-soft)}
+.countbox .cx b{color:var(--ink);font-weight:650}
+.learnbtn{margin-top:auto;padding-top:20px}
+.learnbtn a{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:11px;text-decoration:none;
+  border:1px solid color-mix(in srgb,var(--c) 32%,var(--hair));background:color-mix(in srgb,var(--c) 7%,var(--card));
+  transition:all .22s var(--ease)}
+.learnbtn a:hover{background:color-mix(in srgb,var(--c) 13%,var(--card));border-color:var(--c)}
+.learnbtn .ms{width:13px;height:13px;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:1.5px}
+.learnbtn .ms i{display:block;border-radius:.5px}
+.learnbtn .ms i:nth-child(1){background:#F25022}.learnbtn .ms i:nth-child(2){background:#7FBA00}
+.learnbtn .ms i:nth-child(3){background:#00A4EF}.learnbtn .ms i:nth-child(4){background:#FFB900}
+.learnbtn .lt{flex:1;min-width:0}
+.learnbtn .lt .l1{display:block;font-size:12.6px;font-weight:650;color:var(--ink);line-height:1.3}
+.learnbtn .lt .l2{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.4px;margin-top:3px}
+.learnbtn .ar{color:var(--c);font-size:14px;flex:none}
+
+/* ═══════ TIER LADDER ═══════ */
+.tbl-wrap{border:1px solid var(--hair);border-radius:14px;background:var(--card);overflow:hidden;margin-top:16px;
+  box-shadow:0 2px 12px -8px rgba(35,39,46,.25)}
+.tbl-cap{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;
+  padding:11px 16px;background:color-mix(in srgb,var(--tc,var(--s5)) 10%,var(--card));color:var(--tc,var(--s5));
+  border-bottom:1px solid var(--hair);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.tbl-cap .cn{margin-left:auto;font-weight:400;letter-spacing:.6px;text-transform:none;color:var(--ink-faint);font-size:9.5px}
+.tscroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.9px;min-width:560px;font-family:var(--num)}
+th{font-family:var(--mono);font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--ink-faint);
+  text-align:right;padding:10px 14px;border-bottom:1px solid var(--hair);font-weight:600;white-space:nowrap}
+th:first-child{text-align:left}
+td{padding:9px 14px;text-align:right;color:var(--ink-soft);border-bottom:1px solid color-mix(in srgb,var(--hair) 55%,transparent);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+td:first-child{text-align:left;color:var(--ink);font-weight:500;white-space:normal;font-family:var(--body)}
+tr:last-child td{border-bottom:none}
+tr.total td{font-weight:700;color:var(--ink);background:var(--paper-deep);border-top:1.5px solid var(--hair-strong)}
+tr.sub td{background:color-mix(in srgb,var(--paper-deep) 45%,transparent);font-weight:600;color:var(--ink)}
+tr.pick{background:color-mix(in srgb,var(--s5) 8%,transparent)}
+tr.pick td{color:var(--ink)}
+tr.pick td:first-child::after{content:"optimal";font-family:var(--mono);font-size:8px;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--s5);border:1px solid color-mix(in srgb,var(--s5) 32%,var(--hair));border-radius:999px;padding:2px 6px;margin-left:9px}
+td.pos{color:var(--s5);font-weight:600} td.neg{color:var(--neg);font-weight:600}
+td.disc{color:var(--s4);font-weight:600}
+.gtag{font-family:var(--mono);font-size:8px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);
+  border:1px solid var(--hair-strong);border-radius:999px;padding:2px 6px;margin-left:8px;white-space:nowrap}
+
+/* ═══════ SCOPE GROUPS ═══════ */
+.grp{border:1px solid var(--hair);border-radius:15px;background:var(--card);overflow:hidden;margin-bottom:11px;
+  box-shadow:0 2px 12px -8px rgba(35,39,46,.22);transition:border-color .25s var(--ease)}
+.grp.open{border-color:color-mix(in srgb,var(--gc) 32%,var(--hair))}
+.ghead{display:flex;align-items:center;gap:11px;padding:13px 16px;width:100%;border:none;cursor:pointer;
+  background:color-mix(in srgb,var(--gc) 5%,var(--paper-deep));font-family:var(--body);text-align:left;
+  transition:background .2s var(--ease)}
+.ghead:hover{background:color-mix(in srgb,var(--gc) 11%,var(--paper-deep))}
+.ghead:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+.ghead .chev{width:17px;height:17px;flex:none;color:var(--gc);transition:transform .3s var(--ease)}
+.grp.open .ghead .chev{transform:rotate(90deg)}
+.ghead .chev svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.ghead .gt{font-size:13.6px;font-weight:700;letter-spacing:-.15px;color:var(--ink)}
+.ghead .gc2{font-family:var(--mono);font-size:9px;letter-spacing:.6px;color:var(--gc);border:1px solid color-mix(in srgb,var(--gc) 28%,var(--hair));
+  border-radius:999px;padding:2px 7px;background:var(--card)}
+.ghead .gsum{margin-left:auto;font-family:var(--num);font-size:12.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;
+  font-weight:500;white-space:nowrap}
+.ghead .gsum b{color:var(--ink);font-weight:650}
+.gbody{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease)}
+.grp.open .gbody{grid-template-rows:1fr}
+.gbody > .gin{overflow:hidden}
+.rowhead{display:grid;grid-template-columns:1fr 112px 148px;gap:12px;padding:8px 16px;
+  border-top:1px solid var(--hair);background:color-mix(in srgb,var(--paper-deep) 40%,transparent)}
+.rowhead span{font-family:var(--mono);font-size:8.5px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+.rowhead span:nth-child(2),.rowhead span:nth-child(3){text-align:right}
+.row{display:grid;grid-template-columns:1fr 112px 148px;gap:12px;align-items:center;padding:9px 16px;
+  border-top:1px solid color-mix(in srgb,var(--hair) 50%,transparent);transition:background .2s var(--ease)}
+.row.act{background:color-mix(in srgb,var(--gc) 4%,transparent)}
+.row .rn{min-width:0}
+.row .rn .n{font-size:13.2px;font-weight:600;line-height:1.3;letter-spacing:-.1px}
+.row .rn .u{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px;line-height:1.45}
+.row .rn .u em{font-style:normal;color:var(--ink-soft)}
+.row input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--hair-strong);border-radius:9px;background:var(--paper);
+  font-family:var(--num);font-size:13.5px;font-weight:500;color:var(--ink);text-align:right;-moz-appearance:textfield;
+  transition:all .2s var(--ease);font-variant-numeric:tabular-nums}
+.row input[type=number]:focus{outline:none;border-color:var(--gc);background:var(--card);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--gc) 13%,transparent)}
+.row input[type=number]::-webkit-outer-spin-button,.row input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.row .rc{font-family:var(--num);font-size:12.8px;text-align:right;color:var(--ink-soft);font-variant-numeric:tabular-nums;
+  white-space:nowrap;font-weight:500}
+.row.act .rc{color:var(--ink);font-weight:600}
+.row .rc small{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.3px;margin-top:2px;font-weight:400}
+@media(max-width:720px){
+  .row,.rowhead{grid-template-columns:1fr 84px 104px;gap:8px;padding-left:12px;padding-right:12px}
+  .row .rc{font-size:11.6px}
+}
+
+/* ═══════ CONTROLS ═══════ */
+.ctlgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
+.ctlgrid.two{grid-template-columns:repeat(2,1fr)}
+@media(max-width:920px){.ctlgrid,.ctlgrid.two{grid-template-columns:1fr}}
+.ctl{border:1px solid var(--hair);border-radius:15px;background:var(--card);padding:16px;display:flex;flex-direction:column;
+  box-shadow:0 2px 12px -8px rgba(35,39,46,.22);position:relative;overflow:hidden;
+  transition:border-color .4s var(--ease),box-shadow .4s var(--ease)}
+.ctl .ct{font-family:var(--mono);font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--c);
+  display:flex;align-items:center;gap:7px;margin-bottom:11px;transition:color .4s var(--ease)}
+.ctl .ct .dm{width:6px;height:6px;border-radius:50%;background:var(--c);transition:background .4s var(--ease)}
+#curCtl{--c:var(--s1)}
+.ctl p.cd{margin:0 0 13px;font-size:12.2px;line-height:1.58;color:var(--ink-soft)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--hair-strong);border-radius:10px;
+  overflow:hidden;background:var(--paper-deep);margin-bottom:13px}
+.seg button{border:none;background:none;padding:9px 6px;font-family:var(--mono);font-size:10.5px;font-weight:600;
+  letter-spacing:.8px;text-transform:uppercase;color:var(--ink-faint);cursor:pointer;transition:all .22s var(--ease)}
+.seg button+button{border-left:1px solid var(--hair-strong)}
+.seg button.on{background:var(--c);color:#fff}
+.seg button:not(.on):hover{background:color-mix(in srgb,var(--c) 9%,transparent);color:var(--c)}
+.fld{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.fld label{font-size:12.4px;color:var(--ink-soft);flex:1;line-height:1.35}
+.fld .ipw{position:relative;flex:none;width:106px}
+.fld .ipw input{width:100%;padding:8px 26px 8px 10px;border:1px solid var(--hair-strong);border-radius:9px;background:var(--paper);
+  font-family:var(--num);font-size:13.5px;font-weight:500;color:var(--ink);text-align:right;-moz-appearance:textfield;
+  transition:all .2s var(--ease);font-variant-numeric:tabular-nums}
+.fld .ipw input:focus{outline:none;border-color:var(--c);background:var(--card);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 13%,transparent)}
+.fld .ipw input::-webkit-outer-spin-button,.fld .ipw input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.fld .ipw .sfx{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:11px;
+  color:var(--ink-faint);pointer-events:none}
+.btn{border:1px solid var(--hair-strong);background:var(--paper-deep);border-radius:9px;padding:9px 12px;cursor:pointer;
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-soft);
+  transition:all .22s var(--ease);display:inline-flex;align-items:center;gap:7px;justify-content:center}
+.btn:hover{border-color:var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 8%,var(--card))}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:var(--c);border-color:var(--c);color:#fff}
+.btn.pri:hover{background:color-mix(in srgb,var(--c) 85%,#000);color:#fff}
+.btn[disabled]{opacity:.5;cursor:wait}
+.btn .spin{width:10px;height:10px;border:1.6px solid currentColor;border-right-color:transparent;border-radius:50%;
+  animation:sp .7s linear infinite;display:none}
+.btn.busy .spin{display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.fxnote{font-family:var(--mono);font-size:9.5px;line-height:1.65;color:var(--ink-faint);margin-top:auto;padding-top:12px}
+.fxnote.ok{color:var(--s5)} .fxnote.err{color:var(--neg)}
+.persvc{margin-top:2px;border-top:1px dashed var(--hair-strong);padding-top:12px;display:none}
+.persvc.show{display:block}
+.psr{display:flex;align-items:center;gap:9px;padding:4px 0}
+.psr label{flex:1;font-size:11.8px;color:var(--ink-soft);line-height:1.3;min-width:0}
+.psr .ipw{width:82px;flex:none;position:relative}
+.psr .ipw input{width:100%;padding:5px 22px 5px 7px;border:1px solid var(--hair-strong);border-radius:7px;
+  background:var(--paper);font-family:var(--num);font-size:11.8px;text-align:right;color:var(--ink);-moz-appearance:textfield;
+  font-variant-numeric:tabular-nums}
+.psr .ipw input:focus{outline:none;border-color:var(--c);background:var(--card)}
+.psr .ipw input::-webkit-outer-spin-button,.psr .ipw input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.psr .ipw .sfx{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.psr .tdim{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-left:5px}
+.perscroll{max-height:230px;overflow-y:auto;margin:0 -4px;padding:0 4px}
+
+/* ─── currency treatments ─── */
+#curCtl.cad{--c:var(--cad);border-color:color-mix(in srgb,var(--cad) 40%,var(--hair));
+  box-shadow:0 16px 34px -26px var(--cad)}
+#curCtl.cad .seg button.on{background:var(--cad)}
+#curCtl.usa{--c:var(--usa);border-color:color-mix(in srgb,var(--usa) 40%,var(--hair));
+  box-shadow:0 16px 34px -26px var(--usa)}
+#curCtl.usa .seg button.on{background:var(--usa)}
+.flagart{position:absolute;top:-6px;right:-8px;width:96px;height:96px;pointer-events:none;opacity:0;
+  transform:scale(.3) rotate(-28deg);transform-origin:70% 30%}
+.flagart svg{width:100%;height:100%;opacity:.17}
+#curCtl.cad .leaf,#curCtl.usa .flagUS{animation:flagpop .62s var(--ease) forwards}
+@keyframes flagpop{
+  0%{opacity:0;transform:scale(.3) rotate(-28deg)}
+  55%{opacity:1;transform:scale(1.16) rotate(7deg)}
+  75%{transform:scale(.95) rotate(-3deg)}
+  100%{opacity:1;transform:scale(1) rotate(0deg)}
+}
+.flagsm{width:15px;height:15px;display:none;vertical-align:-3px;margin-left:3px}
+.flagsm svg{width:100%;height:100%}
+#curCtl.cad .leafsm{display:inline-block;animation:flagpop .5s var(--ease) .1s backwards}
+#curCtl.usa .usasm{display:inline-block;animation:flagpop .5s var(--ease) .1s backwards}
+
+/* ═══════ PRICING BASIS ═══════ */
+.basis{position:relative;border:1px solid var(--hair-strong);border-radius:17px;background:var(--card);overflow:hidden;
+  box-shadow:0 16px 40px -34px rgba(35,39,46,.5);margin-top:6px;
+  transition:border-color .4s var(--ease),box-shadow .4s var(--ease)}
+.basisgrid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+@media(max-width:860px){.basisgrid{grid-template-columns:1fr}}
+.bcell{padding:20px 22px}
+.bcell+.bcell{border-left:1px solid var(--hair)}
+@media(max-width:860px){.bcell+.bcell{border-left:none;border-top:1px solid var(--hair)}}
+.bcell .bl3{font-family:var(--mono);font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-faint);
+  margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.bcell .bl3 .n2{width:16px;height:16px;border-radius:50%;background:var(--paper-deep);border:1px solid var(--hair-strong);
+  display:flex;align-items:center;justify-content:center;font-family:var(--num);font-size:9px;font-weight:600;color:var(--ink-soft)}
+.curpick{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+@media(max-width:480px){.curpick{grid-template-columns:1fr}}
+.curcard{border:1.5px solid var(--hair-strong);border-radius:12px;background:var(--paper-deep);padding:13px;cursor:pointer;
+  text-align:left;font-family:var(--body);transition:all .25s var(--ease);position:relative;overflow:hidden}
+.curcard:hover{border-color:var(--cc2);background:color-mix(in srgb,var(--cc2) 7%,var(--card))}
+.curcard.on{border-color:var(--cc2);background:color-mix(in srgb,var(--cc2) 9%,var(--card));
+  box-shadow:0 10px 22px -16px var(--cc2)}
+.curcard .cflag{width:26px;height:18px;border-radius:3px;overflow:hidden;margin-bottom:9px;
+  border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);display:block}
+.curcard .cflag svg{width:100%;height:100%;display:block}
+.curcard .cn2{display:block;font-size:13.4px;font-weight:700;letter-spacing:-.15px;line-height:1.25;margin-bottom:5px}
+.curcard.on .cn2{color:var(--cc2)}
+.curcard .cr{display:block;font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);line-height:1.5}
+.curcard .ctick{position:absolute;top:11px;right:11px;width:17px;height:17px;border-radius:50%;background:var(--cc2);
+  display:none;align-items:center;justify-content:center}
+.curcard.on .ctick{display:flex}
+.curcard .ctick svg{width:9px;height:9px;stroke:#fff;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.srcrow{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid var(--hair);border-radius:11px;
+  background:color-mix(in srgb,var(--paper-deep) 50%,transparent);margin-bottom:9px}
+.srcrow .sd{width:8px;height:8px;border-radius:50%;background:var(--s5);flex:none}
+.srcrow .st2{flex:1;min-width:0}
+.srcrow .st2 .s1x{font-size:12.8px;font-weight:650;line-height:1.3}
+.srcrow .st2 .s2x{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);margin-top:3px;line-height:1.45}
+.basisfoot{padding:13px 22px;border-top:1px solid var(--hair);background:color-mix(in srgb,var(--paper-deep) 45%,transparent);
+  font-family:var(--mono);font-size:10px;line-height:1.7;color:var(--ink-faint)}
+.basisfoot b{color:var(--ink-soft);font-weight:600}
+.basisfoot a{color:var(--s1);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--s1) 35%,transparent)}
+
+/* ═══════ DISCLAIMER ═══════ */
+.disclaimer{margin-top:16px;border:1px solid var(--hair-strong);border-left:3px solid var(--s4);border-radius:12px;
+  background:color-mix(in srgb,var(--paper-deep) 55%,var(--card));padding:15px 18px;display:flex;gap:13px;align-items:flex-start}
+.disclaimer .di{width:19px;height:19px;flex:none;margin-top:1px}
+.disclaimer .di svg{width:100%;height:100%;fill:none;stroke:var(--s4);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.disclaimer p{margin:0;font-size:12.6px;line-height:1.7;color:var(--ink-soft)}
+.disclaimer p b{color:var(--ink);font-weight:650}
+.disclaimer a{color:var(--s1);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--s1) 35%,transparent)}
+.hidnote{font-family:var(--mono);font-size:10px;color:var(--ink-faint);padding:10px 16px;
+  border-top:1px solid var(--hair);background:color-mix(in srgb,var(--paper-deep) 40%,transparent);line-height:1.6}
+
+/* ═══════ DELTAS ═══════ */
+.deltas{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-top:6px}
+@media(max-width:1000px){.deltas{grid-template-columns:1fr 1fr}}
+@media(max-width:540px){.deltas{grid-template-columns:1fr}}
+.delta{border:1px solid var(--hair);border-radius:14px;background:var(--card);padding:18px 16px;text-align:center;
+  box-shadow:0 2px 10px -7px rgba(35,39,46,.2)}
+.delta .dl{font-family:var(--mono);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px}
+.delta .dv{font-family:var(--num);font-weight:600;font-size:clamp(20px,2.5vw,27px);line-height:1.05;letter-spacing:-.8px;
+  color:var(--dc,var(--ink));font-variant-numeric:tabular-nums}
+.delta .dn{font-size:11.4px;line-height:1.55;color:var(--ink-soft);margin-top:10px}
+.delta .dn b{color:var(--ink);font-weight:650}
+.delta .cur{font-family:var(--mono);font-size:8.5px;letter-spacing:1.1px;color:var(--ink-faint);margin-top:6px}
+.delta.hero{background:linear-gradient(180deg,color-mix(in srgb,var(--s5) 10%,var(--card)),var(--card));
+  border-color:color-mix(in srgb,var(--s5) 40%,var(--hair));box-shadow:0 14px 30px -24px var(--s5)}
+.delta.warn{background:linear-gradient(180deg,color-mix(in srgb,var(--neg) 9%,var(--card)),var(--card));
+  border-color:color-mix(in srgb,var(--neg) 38%,var(--hair))}
+
+/* ═══════ VERDICT ═══════ */
+.verdict{margin-top:16px;border:1px solid var(--hair);border-radius:16px;background:var(--card);overflow:hidden;
+  box-shadow:0 14px 34px -30px rgba(35,39,46,.5);transition:border-color .4s var(--ease),box-shadow .4s var(--ease)}
+.verdict.good{border-color:color-mix(in srgb,var(--s5) 40%,var(--hair));box-shadow:0 18px 40px -30px var(--s5)}
+.verdict.bad{border-color:color-mix(in srgb,var(--neg) 40%,var(--hair));box-shadow:0 18px 40px -30px var(--neg)}
+.verdict>header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--hair);
+  background:color-mix(in srgb,var(--paper-deep) 55%,transparent)}
+.verdict>header .vm{width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+  background:var(--ink-faint);transition:background .4s var(--ease)}
+.verdict.good>header .vm{background:var(--s5)} .verdict.bad>header .vm{background:var(--neg)}
+.verdict>header .vm svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.verdict>header .vt{font-family:var(--display);font-weight:600;font-size:19px;letter-spacing:-.3px;line-height:1.2}
+.verdict>header .vb{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;
+  padding:5px 10px;border-radius:999px;border:1px solid var(--hair-strong);color:var(--ink-faint);background:var(--card);white-space:nowrap}
+.verdict.good>header .vb{color:var(--s5);border-color:color-mix(in srgb,var(--s5) 35%,var(--hair))}
+.verdict.bad>header .vb{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 35%,var(--hair))}
+.verdict .vbody{padding:16px 18px;font-size:13.5px;line-height:1.68;color:var(--ink-soft)}
+.verdict .vbody b{color:var(--ink);font-weight:650}
+.buy{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;padding:0 18px 16px}
+.buyc{border:1px solid color-mix(in srgb,var(--s5) 28%,var(--hair));border-radius:12px;
+  background:color-mix(in srgb,var(--s5) 5%,var(--card));padding:13px}
+.buyc .bt{font-family:var(--mono);font-size:9px;letter-spacing:1.1px;text-transform:uppercase;color:var(--s5);margin-bottom:7px}
+.buyc .bv{font-family:var(--num);font-weight:600;font-size:21px;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.buyc .bn{font-size:11px;color:var(--ink-soft);margin-top:7px;line-height:1.45}
+
+/* ═══════ OPTIMISATION MODE ═══════ */
+.modepick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
+@media(max-width:640px){.modepick{grid-template-columns:1fr}}
+.modepick button{border:1.5px solid var(--hair-strong);border-radius:13px;background:var(--card);padding:14px 16px 14px 44px;
+  cursor:pointer;text-align:left;font-family:var(--body);position:relative;transition:all .25s var(--ease);
+  box-shadow:0 2px 10px -8px rgba(35,39,46,.25)}
+.modepick button::before{content:'';position:absolute;left:16px;top:16px;width:16px;height:16px;border-radius:50%;
+  border:1.5px solid var(--hair-strong);background:var(--paper);transition:all .25s var(--ease)}
+.modepick button:hover{border-color:var(--mc);background:color-mix(in srgb,var(--mc) 5%,var(--card))}
+.modepick button.on{border-color:var(--mc);background:color-mix(in srgb,var(--mc) 8%,var(--card));
+  box-shadow:0 12px 26px -20px var(--mc)}
+.modepick button.on::before{border-color:var(--mc);background:var(--mc);box-shadow:inset 0 0 0 3.5px var(--card)}
+.modepick button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.modepick .mt{display:block;font-size:14px;font-weight:700;letter-spacing:-.15px;line-height:1.25;color:var(--ink)}
+.modepick button.on .mt{color:var(--mc)}
+.modepick .md{display:block;font-size:12px;line-height:1.55;color:var(--ink-soft);margin-top:5px}
+.modepick .mk{display:inline-block;font-family:var(--mono);font-size:8.5px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--mc);border:1px solid color-mix(in srgb,var(--mc) 30%,var(--hair));border-radius:999px;padding:2px 7px;
+  margin-left:8px;vertical-align:2px;font-weight:600}
+
+/* ═══════ RE-BUY PLAN ═══════ */
+.rebuy{margin:0 18px 18px;border:1px solid color-mix(in srgb,var(--s4) 38%,var(--hair));border-radius:13px;overflow:hidden;
+  background:color-mix(in srgb,var(--s4) 4%,var(--card))}
+.rebuy:empty{display:none}
+.rebuy .rh{display:flex;align-items:center;gap:10px;padding:12px 15px;border-bottom:1px solid color-mix(in srgb,var(--s4) 22%,var(--hair));
+  background:color-mix(in srgb,var(--s4) 9%,var(--card))}
+.rebuy .rh .ri{width:22px;height:22px;border-radius:50%;background:var(--s4);flex:none;display:flex;align-items:center;justify-content:center}
+.rebuy .rh .ri svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.rebuy .rh .rt{font-size:14px;font-weight:700;letter-spacing:-.15px;color:var(--ink)}
+.rebuy .rh .rc2{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--s4);
+  white-space:nowrap}
+.rebuy .rbody{padding:13px 15px;font-size:13px;line-height:1.65;color:var(--ink-soft)}
+.rebuy .rbody b{color:var(--ink);font-weight:650}
+.tl{position:relative;height:58px;margin:4px 15px 6px}
+.tl .axis{position:absolute;left:0;right:0;top:25px;height:8px;border-radius:5px;background:var(--paper-deep);border:1px solid var(--hair)}
+.tl .lot{position:absolute;top:25px;height:8px;border-radius:5px;
+  background:linear-gradient(90deg,var(--s4),color-mix(in srgb,var(--s4) 45%,#fff))}
+.tl .tick{position:absolute;top:10px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
+.tl .tick b{width:13px;height:13px;border-radius:50%;background:var(--s4);border:2.5px solid var(--card);
+  box-shadow:0 0 0 1px var(--s4);margin-top:9px}
+.tl .tick span{position:absolute;top:-6px;font-family:var(--mono);font-size:8.5px;color:var(--s4);white-space:nowrap;font-weight:600}
+.tl .yr{position:absolute;top:18px;bottom:6px;width:0;border-left:1.5px dashed var(--ink-faint)}
+.tl .yr span{position:absolute;bottom:-9px;left:4px;font-family:var(--mono);font-size:8.5px;color:var(--ink-faint);white-space:nowrap}
+.tl .mlab{position:absolute;top:44px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;color:var(--ink-faint)}
+.rebuy table{min-width:520px;font-size:12.4px}
+.rebuy th,.rebuy td{padding:7px 15px}
+.rebuy tr.y2 td{color:var(--ink-faint)}
+.rebuy .rfoot{padding:10px 15px;border-top:1px solid color-mix(in srgb,var(--s4) 20%,var(--hair));font-family:var(--mono);
+  font-size:10px;line-height:1.65;color:var(--ink-faint)}
+.rebuy .rfoot b{color:var(--ink-soft)}
+.alttip{margin:0 18px 16px;padding:11px 14px;border:1px dashed color-mix(in srgb,var(--s1) 45%,var(--hair));border-radius:11px;
+  background:color-mix(in srgb,var(--s1) 5%,var(--card));font-size:12.6px;line-height:1.6;color:var(--ink-soft);
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.alttip:empty{display:none}
+.alttip b{color:var(--ink);font-weight:650}
+.alttip span{flex:1;min-width:240px}
+.alttip button{border:1px solid var(--s1);background:var(--s1);color:#fff;border-radius:8px;padding:7px 11px;cursor:pointer;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;font-weight:600;flex:none}
+.alttip button:hover{background:color-mix(in srgb,var(--s1) 85%,#000)}
+
+/* ═══════ CHART ═══════ */
+.chartwrap{border:1px solid var(--hair);border-radius:14px;background:var(--card);padding:18px;margin-top:16px;
+  box-shadow:0 2px 12px -8px rgba(35,39,46,.25)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:15px}
+.legend span{font-family:var(--mono);font-size:10px;color:var(--ink-soft);display:flex;align-items:center;gap:7px}
+.legend .sw{width:10px;height:10px;border-radius:3px;flex:none}
+.legend .sw.unused{background:repeating-linear-gradient(45deg,var(--unused),var(--unused) 2px,
+  color-mix(in srgb,var(--unused) 45%,#fff) 2px,color-mix(in srgb,var(--unused) 45%,#fff) 4px)}
+.bars{display:flex;flex-direction:column;gap:17px}
+.barrow .bl2{display:flex;align-items:baseline;gap:10px;margin-bottom:7px}
+.barrow .bl2 .bn{font-size:13px;font-weight:650;letter-spacing:-.1px}
+.barrow .bl2 .bv{margin-left:auto;font-family:var(--num);font-size:13.5px;font-weight:600;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.bartrack{height:30px;border-radius:9px;background:var(--paper-deep);border:1px solid var(--hair);overflow:hidden;display:flex}
+.bartrack i{display:block;height:100%;transition:width .55s var(--ease)}
+.bartrack i+i{border-left:1px solid color-mix(in srgb,var(--card) 55%,transparent)}
+.bartrack i.unused{background:repeating-linear-gradient(45deg,var(--unused),var(--unused) 5px,
+  color-mix(in srgb,var(--unused) 52%,#fff) 5px,color-mix(in srgb,var(--unused) 52%,#fff) 10px)}
+.barsub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:7px;line-height:1.55}
+
+/* savings row — drawn right-to-left so it reads as money coming back */
+.barrow.save{margin-top:3px;padding-top:15px;border-top:1px dashed var(--hair-strong)}
+.barrow.save .bl2 .bn{color:var(--s5);display:flex;align-items:center;gap:8px}
+.barrow.save .bl2 .bn .ar2{font-family:var(--mono);font-size:14px;line-height:1}
+.barrow.save .bl2 .bv{color:var(--s5);font-size:16px}
+.bartrack.rev{flex-direction:row-reverse;border-color:color-mix(in srgb,var(--s5) 34%,var(--hair));
+  background:color-mix(in srgb,var(--s5) 5%,var(--paper-deep))}
+.bartrack.rev i.savefill{
+  background:linear-gradient(270deg,var(--s5),color-mix(in srgb,var(--s5) 62%,#5FCF8E));
+  animation:saveglow 2.4s ease-in-out infinite;position:relative}
+.bartrack.rev i.savefill::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(270deg,rgba(255,255,255,.42),transparent 55%);
+  animation:sheen 2.4s ease-in-out infinite}
+@keyframes saveglow{
+  0%,100%{box-shadow:0 0 0 0 rgba(16,124,65,0),inset 0 0 0 0 rgba(255,255,255,0)}
+  50%{box-shadow:0 0 18px 2px color-mix(in srgb,var(--s5) 55%,transparent),
+      inset 0 0 12px 0 rgba(255,255,255,.28)}
+}
+@keyframes sheen{0%,100%{opacity:.25}50%{opacity:.75}}
+@media(prefers-reduced-motion:reduce){
+  .bartrack.rev i.savefill,.bartrack.rev i.savefill::after{animation:none}
+}
+
+/* ═══════ CLOSE ═══════ */
+.close{margin-top:6px;border:1px solid var(--hair);border-radius:18px;background:var(--card);padding:28px;
+  box-shadow:0 16px 40px -34px rgba(35,39,46,.5)}
+.close h3{font-family:var(--display);font-weight:600;font-size:23px;letter-spacing:-.4px;margin:0 0 12px}
+.close p{font-size:13.8px;line-height:1.7;color:var(--ink-soft);margin:0 0 14px;max-width:78ch}
+.close p b{color:var(--ink);font-weight:650}
+.steps{display:grid;gap:10px;margin-top:16px}
+.step{display:flex;gap:13px;align-items:flex-start;padding:13px 15px;border:1px solid var(--hair);border-radius:12px;
+  background:color-mix(in srgb,var(--paper-deep) 40%,transparent)}
+.step .sn{width:23px;height:23px;border-radius:50%;background:var(--s4);color:#fff;flex:none;display:flex;
+  align-items:center;justify-content:center;font-family:var(--num);font-size:11.5px;font-weight:600}
+.step .sc{flex:1;min-width:0}
+.step .sc .sh{font-size:13.3px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.step .sc p{font-size:12.6px;line-height:1.6;margin:0;color:var(--ink-soft)}
+.step .sc p a{color:var(--s1);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--s1) 35%,transparent);font-weight:600;white-space:nowrap}
+.step .sc p code{font-family:var(--mono);font-size:11.5px;background:var(--paper-deep);padding:1px 5px;border-radius:4px;color:var(--ink)}
+footer.foot{margin-top:38px;padding-top:22px;border-top:1px solid var(--hair);display:flex;flex-wrap:wrap;gap:14px;
+  align-items:center;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.4px;line-height:1.8}
+footer.foot .ms{width:11px;height:11px;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:1px}
+footer.foot .ms i{display:block;border-radius:.5px}
+footer.foot .ms i:nth-child(1){background:#F25022}footer.foot .ms i:nth-child(2){background:#7FBA00}
+footer.foot .ms i:nth-child(3){background:#00A4EF}footer.foot .ms i:nth-child(4){background:#FFB900}
+footer.foot a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--hair-strong)}
+footer.foot a:hover{color:var(--s1)}
+.toolbar{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+@media print{.rail,.minibar,.toolbar{display:none}section.sec{opacity:1;transform:none}.grp .gbody{grid-template-rows:1fr}}
+</style>
+</head>
+<body>
+<div class="minibar" id="minibar">
+  <div class="mb-in">
+    <div class="mb-mark"><span class="sq"></span>Defender for Cloud · Pre-Purchase Plan</div>
+    <div class="mb-sep"></div>
+    <div class="mb-stats">
+      <div class="mb-stat" style="--mc:var(--neg)"><span class="v" id="mbPayg">—</span><span class="l">Pay-go / yr</span></div>
+      <div class="mb-stat" style="--mc:var(--s1)"><span class="v" id="mbP3">—</span><span class="l">P3 / yr</span></div>
+      <div class="mb-stat" style="--mc:var(--s5)"><span class="v" id="mbSave">—</span><span class="l">Saving</span></div>
+      <div class="mb-stat" style="--mc:var(--s4)"><span class="v" id="mbDcu">—</span><span class="l">Commit DCUs</span></div>
+    </div>
+  </div>
+  <div class="mb-prog" id="mbProg"></div>
+</div>
+
+<nav class="rail" id="rail"></nav>
+
+<div class="page">
+
+<header class="masthead">
+  <div class="eyebrow">Microsoft Defender for Cloud · Pre-Purchase Plan</div>
+  <h1>Commit once, and every Defender for Cloud plan gets <span class="hl">cheaper</span>.</h1>
+  <p class="standfirst">
+    The Pre-Purchase Plan lets you buy Defender Commit Units up front and draw them down against your Defender for Cloud
+    consumption for twelve months. The discount is <strong>published, tiered and automatic</strong> — the more units you buy,
+    the deeper it goes.
+  </p>
+  <div class="analogy">
+    <div class="ah">Put simply</div>
+    <p>
+      It works like buying gift cards for a restaurant you eat at every week. You hand over <b>$82 and get $100 of credit</b> —
+      and every meal draws down that same balance, whether it is the appetiser, the main or the dessert. Each dish still costs
+      menu price; you simply bought the dollars for less than a dollar. The caveats are the same as a gift card too:
+      the balance is <b>good for twelve months</b>, and you only come out ahead if you actually eat through it.
+    </p>
+  </div>
+
+  <div class="bl">
+    <div class="blc" style="--c:var(--s4)">
+      <div class="bt"><i></i>Built-in volume discount</div>
+      <div class="bfig">10&thinsp;–&thinsp;22%</div>
+      <h3>The discount is programmatic</h3>
+      <p>Ten published tiers, from 5,000 to 350,000 units. The rate is set by the tier you buy — <b>nothing to negotiate
+        and nothing to approve</b>. Buying more units moves you down the ladder automatically.</p>
+    </div>
+    <div class="blc" style="--c:var(--s1)">
+      <div class="bt"><i></i>Term</div>
+      <div class="bfig">12 months</div>
+      <h3>Use the balance whenever you like</h3>
+      <p>Unlike VM reservations, commit units <b>do not expire hourly</b>. They sit in a pool and are drawn down as you
+        consume, at any point across the term — so seasonal or uneven usage is not penalised.</p>
+    </div>
+    <div class="blc" style="--c:var(--s5)">
+      <div class="bt"><i></i>Coverage</div>
+      <div class="bfig">One balance</div>
+      <h3>It covers all of Defender for Cloud</h3>
+      <p>There is <b>no ratio and no per-plan allocation</b>. Servers, CSPM, Containers, SQL, Storage, App Service, Key Vault,
+        APIs and AI all deduct from the same pool — which is what makes Defender for Cloud spend simpler to manage.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════ 1 · PRICING BASIS ══════════ -->
+<section class="sec" id="s1" data-rail="Currency" style="--c:var(--s1)">
+  <div class="kicker"><span class="dotmark"></span>Section 01 — Set the pricing basis</div>
+  <h2>Which currency are you working in?</h2>
+  <p class="sub">
+    Defender for Cloud list pricing is set in US dollars and published in local currency at a rate Microsoft fixes once a
+    month. Choose the basis you are quoting in, and everything downstream — plan prices, commit tiers and the analysis —
+    follows it.
+  </p>
+
+  <div class="basis" id="curCtl">
+    <div class="flagart leaf" aria-hidden="true">
+      <svg viewBox="0 0 512 512"><path fill="#D52B1E" d="M256 40c-3 0-5 2-6 4l-25 57c-3 6-8 5-13 2l-37-21 19 90c3 12-5 17-13 9l-44-44-16 33-62-9 21 54c4 10 1 13-5 16l-24 12 93 76c8 6 6 11 3 20l-9 26 87-11c7-1 11 2 11 9l-5 90h33l-5-90c0-7 4-10 11-9l87 11-9-26c-3-9-5-14 3-20l93-76-24-12c-6-3-9-6-5-16l21-54-62 9-16-33-44 44c-8 8-16 3-13-9l19-90-37 21c-5 3-10 4-13-2l-25-57c-1-2-3-4-6-4z"/></svg>
+    </div>
+    <div class="flagart flagUS" aria-hidden="true">
+      <svg viewBox="0 0 76 40">
+        <rect width="76" height="40" fill="#fff"/>
+        <g fill="#B31942"><rect y="0" width="76" height="3.08"/><rect y="6.15" width="76" height="3.08"/>
+          <rect y="12.3" width="76" height="3.08"/><rect y="18.46" width="76" height="3.08"/>
+          <rect y="24.6" width="76" height="3.08"/><rect y="30.77" width="76" height="3.08"/>
+          <rect y="36.92" width="76" height="3.08"/></g>
+        <rect width="30.4" height="21.54" fill="#0A3161"/>
+        <g fill="#fff"><circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/><circle cx="17" cy="4" r="1.5"/><circle cx="23" cy="4" r="1.5"/>
+          <circle cx="8" cy="8" r="1.5"/><circle cx="14" cy="8" r="1.5"/><circle cx="20" cy="8" r="1.5"/><circle cx="26" cy="8" r="1.5"/>
+          <circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/><circle cx="17" cy="12" r="1.5"/><circle cx="23" cy="12" r="1.5"/>
+          <circle cx="8" cy="16" r="1.5"/><circle cx="14" cy="16" r="1.5"/><circle cx="20" cy="16" r="1.5"/><circle cx="26" cy="16" r="1.5"/></g>
+      </svg>
+    </div>
+
+    <div class="basisgrid">
+      <div class="bcell">
+        <div class="bl3"><span class="n2">1</span>Currency and region</div>
+        <div class="curpick" id="curMode">
+          <button class="curcard" data-cur="CAD" style="--cc2:var(--cad)">
+            <span class="ctick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <span class="cflag"><svg viewBox="0 0 76 40"><rect width="76" height="40" fill="#fff"/>
+              <rect width="19" height="40" fill="#D52B1E"/><rect x="57" width="19" height="40" fill="#D52B1E"/>
+              <path fill="#D52B1E" d="M38 8l-2.4 4.5c-.3.5-.8.4-1.3.2l-3.4-1.8 2.6 9.7c.5 1.3-.5 1.3-.9.8l-4.4-4.9-.7 2.5c-.1.3-.4.3-.9.2L22.5 18l1.5 5.4c.3 1.2.6 1.7-.3 2l-2 .9 9.7 7.9c.4.3.6.9.4 1.4l-.8 2.8c3.3-.4 6.3-1 9.6-1.3.3 0 .8.4.8.7l-.4 8.7h1.6l-.3-8.7c0-.3.4-.8.7-.7 3.4.3 6.3.9 9.6 1.3l-.8-2.8c-.2-.5 0-1.1.4-1.4l9.7-7.9-2-.9c-.9-.3-.6-.8-.3-2l1.5-5.4-4.1.9c-.5.1-.8.1-.9-.2l-.7-2.5-4.4 4.9c-.4.5-1.4.5-.9-.8l2.6-9.7-3.4 1.8c-.5.2-1 .3-1.3-.2z"/></svg></span>
+            <span class="cn2">I'm working in CAD</span>
+            <span class="cr">Canada Central · Canadian dollars</span>
+          </button>
+          <button class="curcard" data-cur="USD" style="--cc2:var(--usa)">
+            <span class="ctick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <span class="cflag"><svg viewBox="0 0 76 40"><rect width="76" height="40" fill="#fff"/>
+              <g fill="#B31942"><rect y="0" width="76" height="3.08"/><rect y="6.15" width="76" height="3.08"/>
+              <rect y="12.3" width="76" height="3.08"/><rect y="18.46" width="76" height="3.08"/>
+              <rect y="24.6" width="76" height="3.08"/><rect y="30.77" width="76" height="3.08"/>
+              <rect y="36.92" width="76" height="3.08"/></g>
+              <rect width="30.4" height="21.54" fill="#0A3161"/>
+              <g fill="#fff"><circle cx="5" cy="4" r="1.4"/><circle cx="11" cy="4" r="1.4"/><circle cx="17" cy="4" r="1.4"/><circle cx="23" cy="4" r="1.4"/>
+              <circle cx="8" cy="8" r="1.4"/><circle cx="14" cy="8" r="1.4"/><circle cx="20" cy="8" r="1.4"/><circle cx="26" cy="8" r="1.4"/>
+              <circle cx="5" cy="12" r="1.4"/><circle cx="11" cy="12" r="1.4"/><circle cx="17" cy="12" r="1.4"/><circle cx="23" cy="12" r="1.4"/>
+              <circle cx="8" cy="16" r="1.4"/><circle cx="14" cy="16" r="1.4"/><circle cx="20" cy="16" r="1.4"/><circle cx="26" cy="16" r="1.4"/></g></svg></span>
+            <span class="cn2">I'm working in USD</span>
+            <span class="cr">East US · US dollars</span>
+          </button>
+        </div>
+        <div class="fld" style="margin-top:14px">
+          <label for="fxRate">Conversion rate — CAD per 1 USD</label>
+          <div class="ipw"><input type="number" id="fxRate" min="0.1" max="10" step="0.00001" value="1.38605"><span class="sfx">×</span></div>
+        </div>
+      </div>
+
+      <div class="bcell">
+        <div class="bl3"><span class="n2">2</span>Conversion rate</div>
+        <div class="srcrow">
+          <span class="sd" id="srcDot"></span>
+          <span class="st2"><span class="s1x" id="srcTitle">Built-in rate</span>
+            <span class="s2x" id="srcSub">Azure published rate, verified 30 September 2026</span></span>
+        </div>
+        <button class="btn pri" id="btnLive" style="width:100%">
+          <span class="spin"></span><span class="lb">Pull live rate from Azure</span>
+        </button>
+        <div class="fxnote" id="liveNote">
+          Reads the same <b>1 USD = x CAD</b> figure shown at the top of the Azure pricing page, which is the rate Azure
+          bills Canadian customers at for the current month. Checked automatically when the page opens.
+        </div>
+      </div>
+    </div>
+
+    <div class="basisfoot">
+      <b>How the rate is set.</b> Microsoft does not convert at live market spot. Non-USD prices are calculated in US dollars
+      and converted using <b>London closing spot rates captured two business days before the last business day of the previous
+      month</b>. That single rate then applies to every transaction for the whole of the following month, which is why the
+      figure on the pricing page only moves once a month. The page pulls the current rate live from Azure on load; if that
+            is blocked, the built-in fallback (<b>1.38605</b>, Azure's published September 2026 rate) is used, and it
+            reproduces every Canadian price on the
+      <a href="https://azure.microsoft.com/en-us/pricing/details/defender-for-cloud/" target="_blank" rel="noopener">pricing page</a> exactly.
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════ 2 · THE PLANS ══════════ -->
+<section class="sec" id="s2" data-rail="Plans" style="--c:var(--s1)">
+  <div class="kicker"><span class="dotmark"></span>Section 02 — What the plans do</div>
+  <h2>The Defender for Cloud catalogue</h2>
+  <p class="sub">
+    Defender for Cloud has two halves: <b>posture management</b>, which finds the misconfiguration before anyone exploits it,
+    and <b>workload protection</b>, which catches the attack when they do. Each plan is enabled and billed independently.
+    Pick a category, then a plan.
+  </p>
+  <div class="explorer">
+    <div class="exnav">
+      <div class="nl">
+        <svg viewBox="0 0 24 24"><path d="M8 9l4-4 4 4"/><path d="M16 15l-4 4-4-4"/></svg>
+        Choose a category
+      </div>
+      <div class="segbar" id="segBar" role="tablist"></div>
+    </div>
+    <div class="pillrow" id="pillRow"></div>
+    <div class="spot" id="spot"></div>
+  </div>
+</section>
+
+<!-- ══════════ 3 · HOW P3 WORKS ══════════ -->
+<section class="sec" id="s3" data-rail="How it works" style="--c:var(--s4)">
+  <div class="kicker"><span class="dotmark"></span>Section 03 — How the Pre-Purchase Plan works</div>
+  <h2>How Defender commit tiers work</h2>
+  <p class="sub">
+    A commit unit is worth <b>one US dollar of list-price Defender for Cloud consumption</b>. There is no conversion ratio to
+    work out: forecast twelve months of spend at retail, and that number is how many units you need. Usage deducts from the
+    pool automatically — nothing to redeploy, nothing to assign.
+  </p>
+  <div class="tbl-wrap" style="--tc:var(--s4)">
+    <div class="tbl-cap">Commit unit tiers<span class="cn">12-month term · list prices in USD</span></div>
+    <div class="tscroll"><table id="tierRef"><thead><tr>
+      <th>Tier</th><th>Commit units</th><th>Discount</th><th>Price</th><th>Cost per unit</th><th>Covers list spend of</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="note">
+    <b>Two things that decide the maths.</b> First, covered usage draws down at <b>retail price</b> — an existing annual
+    commitment or SKU discount is not combined with the tier discount, so the two do not stack. Second, prices on the
+    reservation page and the unit deductions themselves are <b>always in USD</b>, whichever currency you are billed in.
+    Source: <a href="https://learn.microsoft.com/en-us/azure/defender-for-cloud/prepurchase-plan" target="_blank" rel="noopener">Optimize Defender for Cloud costs with a pre-purchase plan</a>.
+  </div>
+</section>
+
+<!-- ══════════ 4 · SCOPE ══════════ -->
+<section class="sec" id="s4" data-rail="Scope" style="--c:var(--s3)">
+  <div class="kicker"><span class="dotmark"></span>Section 04 — Size the estate</div>
+  <h2>Enter what you intend to protect</h2>
+  <p class="sub">
+    Open a category and fill in the plans in play — every field starts at zero. Quantities are <b>monthly averages</b>, and
+    the figure beside each line is list price before any discount.
+  </p>
+  <div class="toolbar">
+    <button class="btn" id="btnSample" style="--c:var(--s3)">Load a worked example</button>
+    <button class="btn" id="btnExpand" style="--c:var(--s3)">Expand all</button>
+    <button class="btn" id="btnClear" style="--c:var(--neg)">Reset to zero</button>
+  </div>
+  <div id="groups" style="margin-top:16px"></div>
+  <div class="note">
+    <b>Source.</b> Unit prices are US list from the Microsoft Defender for Cloud pricing page and the Azure Retail Prices API
+    (East US). Regional pricing varies — confirm against the pricing page for the geography you are quoting.
+  </div>
+</section>
+
+<!-- ══════════ 5 · ANALYSIS ══════════ -->
+<section class="sec" id="s5" data-rail="Analysis" style="--c:var(--s5)">
+  <div class="kicker"><span class="dotmark"></span>Section 05 — The number</div>
+  <h2>Price analysis</h2>
+  <p class="sub" id="anSub">
+    The optimiser sizes twelve months of list consumption, then tests every tier, every two-tier combination and every bulk
+    multiple of the top tier to find the lowest total cost. Consumption beyond the commit balance settles at pay-as-you-go.
+  </p>
+
+  <div class="modepick" id="optMode" role="radiogroup" aria-label="Optimise for">
+    <button data-opt="horizon" class="on" role="radio" aria-checked="true" style="--mc:var(--s1)">
+      <span class="mt">12-month horizon</span>
+      <span class="md">Size one purchase — or a stack of tiers — to cover a full year of forecast consumption. One order, one renewal date.</span>
+    </button>
+    <button data-opt="runrate" role="radio" aria-checked="false" style="--mc:var(--s4)">
+      <span class="mt">Monthly run rate<span class="mk">Re-buy cycle</span></span>
+      <span class="md">Buy the deepest-discount tier your monthly burn can consume inside its term, and re-buy it every time it runs out.</span>
+    </button>
+  </div>
+
+  <div class="deltas">
+    <div class="delta" style="--dc:var(--neg)"><div class="dl">Pay-as-you-go</div><div class="dv" id="kPayg">—</div>
+      <div class="dn" id="kPaygN">per year</div><div class="cur" id="kPaygC"></div></div>
+    <div class="delta" style="--dc:var(--s1)"><div class="dl">Pre-Purchase Plan</div><div class="dv" id="kP3">—</div>
+      <div class="dn" id="kP3N">per year</div><div class="cur" id="kP3C"></div></div>
+    <div class="delta hero" style="--dc:var(--s5)"><div class="dl">Annual saving</div><div class="dv" id="kSave">—</div>
+      <div class="dn" id="kSaveN">versus pay-as-you-go</div><div class="cur" id="kSaveC"></div></div>
+    <div class="delta" style="--dc:var(--s4)"><div class="dl">Effective discount</div><div class="dv" id="kEff">—</div>
+      <div class="dn" id="kEffN">against list price</div><div class="cur"></div></div>
+  </div>
+
+  <div class="verdict" id="verdict">
+    <header>
+      <span class="vm"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span class="vt" id="vTitle">Enter a scope to model</span>
+      <span class="vb" id="vBadge">Awaiting input</span>
+    </header>
+    <div class="vbody" id="vBody">
+      Fill in Section 04 and the recommendation appears here, including exactly which tiers to buy.
+    </div>
+    <div class="buy" id="buyCards"></div>
+    <div class="rebuy" id="rebuy"></div>
+    <div class="alttip" id="altTip"></div>
+  </div>
+
+  <div class="chartwrap">
+    <div class="legend">
+      <span><i class="sw" style="background:var(--s4)"></i>Commit units consumed</span>
+      <span><i class="sw unused"></i>Unused commit (expires)</span>
+      <span><i class="sw" style="background:var(--s2)"></i>Settled at pay-as-you-go</span>
+      <span><i class="sw" style="background:var(--s5)"></i>Savings</span>
+    </div>
+    <div class="bars" id="bars"></div>
+  </div>
+
+  <div class="tbl-wrap" style="--tc:var(--s5)">
+    <div class="tbl-cap">Line by line<span class="cn" id="lineCap">annual</span></div>
+    <div class="tscroll"><table id="lineTbl"><thead><tr>
+      <th>Plan</th><th>Qty</th><th>Unit price</th><th>List / yr</th><th>Pay-go / yr</th>
+      <th>Saving / yr</th><th>Commit units</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="tbl-wrap" style="--tc:var(--s4)">
+    <div class="tbl-cap">Commit tier fit<span class="cn" id="fitCap">total cost of ownership at each tier</span></div>
+    <div class="tscroll"><table id="fitTbl"><thead></thead><tbody></tbody></table></div>
+    <div class="hidnote" id="hidNote" hidden></div>
+  </div>
+
+  <div class="disclaimer">
+    <span class="di"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></svg></span>
+    <p>
+      This tool is to be used for <b>estimation and comparison purposes</b>, and does not constitute a pricing guarantee on
+      services, or service pricing. To reference the most up-to-date pricing, please reference the
+      <a href="https://azure.microsoft.com/en-us/pricing/details/defender-for-cloud/" target="_blank" rel="noopener">Azure pricing page</a>,
+      or your <a href="https://portal.azure.com/" target="_blank" rel="noopener">Azure portal</a>.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 7 · BUYING ══════════ -->
+<section class="sec" id="s6" data-rail="Buying" style="--c:var(--s4)">
+  <div class="kicker"><span class="dotmark"></span>Section 06 — Making the purchase</div>
+  <h2>How it is actually bought</h2>
+  <div class="close">
+    <h3>Four practical points</h3>
+    <p>
+      A Pre-Purchase Plan is bought as an Azure reservation, not as a licence or an amendment. The mechanics below come from
+      the Microsoft Learn documentation and determine who can buy it and what it covers.
+    </p>
+    <div class="steps">
+      <div class="step"><span class="sn">1</span><div class="sc">
+        <div class="sh">Bought from the Azure portal reservations page</div>
+        <p>In the Azure portal go to <b>Reservations → + Add</b> and select <b>Microsoft Defender for Cloud Pre-Purchase
+          Plan</b>. Choose the subscription that pays, choose the scope, then choose how many commit units to buy and complete
+          the purchase.
+          <a href="https://learn.microsoft.com/en-us/azure/defender-for-cloud/prepurchase-plan#purchase-defender-for-cloud-commit-units" target="_blank" rel="noopener">Current purchase steps on Microsoft Learn&nbsp;&#8599;</a></p></div></div>
+      <div class="step"><span class="sn">2</span><div class="sc">
+        <div class="sh">You need the right role</div>
+        <p>Owner or <b>Reservation purchaser</b> on an Azure subscription. On Enterprise Agreements the
+          <code>Reserved Instances</code> enrollment policy must be enabled, or you must be an EA admin.</p></div></div>
+      <div class="step"><span class="sn">3</span><div class="sc">
+        <div class="sh">Scope decides what it covers</div>
+        <p>Choose <b>resource group</b>, <b>single subscription</b>, <b>management group</b>, or <b>shared</b> — which applies
+          the balance across every eligible subscription in the billing context. Shared scope is the usual choice.</p></div></div>
+      <div class="step"><span class="sn">4</span><div class="sc">
+        <div class="sh">Charges can draw on existing Azure prepayment</div>
+        <p>The up-front cost is deducted from the enrollment's Azure Prepayment balance where one exists, or billed as
+          overage — so an existing MACC can fund the purchase.</p></div></div>
+    </div>
+    <p style="margin-top:18px">
+      Utilisation is visible after purchase under <b>Reservations</b> in the Azure portal, so draw-down against the balance
+      can be tracked through the term rather than discovered at renewal.
+    </p>
+  </div>
+
+  <footer class="foot">
+    <span class="ms"><i></i><i></i><i></i><i></i></span>
+    <span>Prices from the <a href="https://azure.microsoft.com/en-us/pricing/details/defender-for-cloud/" target="_blank" rel="noopener">Defender for Cloud pricing page</a>
+      and the Azure Retail Prices API (East US, USD list). Mechanics from <a href="https://learn.microsoft.com/en-us/azure/defender-for-cloud/prepurchase-plan" target="_blank" rel="noopener">Microsoft Learn</a>.</span>
+    <span>Built by Adam Schwichtenberg - Security Specialist, Canada SME&amp;C</span>
+    <span>This tool is for estimation purposes only. It does not provide a quote on services, and is explicitly for the use of cost planning. Please refer to the Azure pricing page, or with your account team for further information.</span>
+  </footer>
+</section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ════════════════════════════════════════════════════════════════════
+   PRICE BOOK — USD list, East US.
+   azure.microsoft.com/pricing/details/defender-for-cloud + Retail Prices API.
+   p = USD per unit per MONTH.
+   ════════════════════════════════════════════════════════════════════ */
+const FAMS = [
+  { id:'posture', label:'Posture',       c:'var(--s1)' },
+  { id:'servers', label:'Servers',       c:'var(--s2)' },
+  { id:'cont',    label:'Containers',    c:'var(--s2)' },
+  { id:'data',    label:'Databases',     c:'var(--s3)' },
+  { id:'storage', label:'Storage & AI',  c:'var(--s3)' },
+  { id:'service', label:'Service layer', c:'var(--s4)' },
+  { id:'apis',    label:'APIs',          c:'var(--s4)' }
+];
+const FAM = Object.fromEntries(FAMS.map(f => [f.id, f]));
+
+const DOC = 'https://learn.microsoft.com/en-us/azure/defender-for-cloud/';
+
+const SERVICES = [
+  { id:'cspm', f:'posture', n:'Defender CSPM', p:5.11, u:'billable resource', input:true,
+    short:'The paid posture tier. Adds the analysis that turns thousands of findings into the handful that actually chain into a breach.',
+    caps:['Agentless vulnerability scanning','Attack path analysis','Cloud security graph','Data-aware security posture',
+          'Code-to-cloud contextualisation','Internet exposure analysis','Agentless secrets scanning','Governance rules'],
+    bill:'Protects every connected workload but <b>bills only on compute, databases, storage and serverless</b> — VMs, storage accounts, OSS databases, and SQL PaaS and servers on machines.',
+    count:'Count VMs, storage accounts, OSS DBs and SQL instances. <b>8 functions or web apps = 1</b> billable resource; <b>2 serverless containers = 1</b>.',
+    doc:DOC + 'concept-cloud-security-posture-management', docn:'Cloud Security Posture Management' },
+
+  { id:'found', f:'posture', n:'Foundational CSPM', p:0, u:'included at no cost', input:false,
+    short:'On by default for every connected Azure, AWS and GCP subscription. The hygiene layer, with no meter attached.',
+    caps:['Continuous security assessment','Secure Score','Microsoft cloud security benchmark','Asset inventory',
+          'DevOps posture visibility','Infrastructure-as-code security','Regulatory compliance dashboard'],
+    bill:'No charge. Enabled automatically the moment a subscription is connected — there is nothing to size or buy.',
+    count:'Nothing to count. Free across all clouds and all resources.',
+    doc:DOC + 'concept-cloud-security-posture-management', docn:'Cloud Security Posture Management' },
+
+  { id:'srv1', f:'servers', n:'Defender for Servers — Plan 1', p:4.906, u:'server', input:true,
+    short:'Endpoint-grade protection for servers across Azure, AWS, GCP and on-premises via Arc. The entry point for server coverage.',
+    caps:['Defender for Endpoint P2 integration','EDR and next-generation antivirus','Automated investigation and response',
+          'Agentless malware scanning','Agentless vulnerability assessment','Threat detection for OS and control plane'],
+    bill:'Billed on <b>total server uptime hours</b>, not instance count. An estate running 4,000 server-hours in a 720-hour month bills 5.56 servers.',
+    count:'Enter <b>average concurrent servers</b>, not the CMDB headcount — autoscaled and ephemeral fleets cost far less than a headcount estimate suggests.',
+    doc:DOC + 'plan-defender-for-servers-select-plan', docn:'Select a Defender for Servers plan' },
+
+  { id:'srv2', f:'servers', n:'Defender for Servers — Plan 2', p:14.60, u:'server', input:true,
+    short:'Everything in Plan 1, plus the posture, hardening and compliance controls auditors ask about. Roughly three times the price.',
+    caps:['Defender for Endpoint P2 integration','EDR and next-generation antivirus','Automated investigation and response',
+          'Agentless malware scanning','Agentless vulnerability assessment','Threat detection for OS and control plane',
+          'MDVM premium add-on','Agentless secrets scanning','Just-in-time VM access','File integrity monitoring',
+          'Adaptive application controls','Network hardening','Regulatory compliance dashboard','500 MB/day free ingestion'],
+    bill:'Same uptime-hours basis as Plan 1. The <b>P1 / P2 mix is the single biggest lever</b> on total Defender for Cloud spend.',
+    count:'Enter average concurrent servers you intend to place on Plan 2. Most estates run a mix, with P2 on crown-jewel and regulated workloads.',
+    doc:DOC + 'plan-defender-for-servers-select-plan', docn:'Select a Defender for Servers plan' },
+
+  { id:'cont', f:'cont', n:'Defender for Containers', p:6.8693, u:'vCore', input:true,
+    short:'Registry scanning plus Kubernetes runtime threat detection and hardening, across AKS, EKS, GKE and Arc-enabled clusters.',
+    caps:['Registry vulnerability assessment','Runtime threat detection','Kubernetes hardening recommendations',
+          'Agentless Kubernetes discovery','Binary drift detection','Gated deployment policy'],
+    bill:'Priced on the <b>vCores of your Kubernetes worker nodes</b> — not per container and not per node. Includes 20 free image scans per charged vCore per month.',
+    count:'Total vCores across worker node pools. Image scans beyond the free allowance bill separately at $0.29 per digest, which most estates never hit.',
+    doc:DOC + 'defender-for-containers-introduction', docn:'Overview of Defender for Containers' },
+
+  { id:'contImg', f:'cont', n:'Additional container image scans', p:0.29, u:'image digest', input:true,
+    short:'Charged only when registry scanning exceeds the free allowance included with your charged vCores.',
+    caps:['Per-digest vulnerability assessment','Covers registries with no matching worker vCores'],
+    bill:'<b>20 free scans per charged vCore per month</b>, based on the previous month\u2019s vCore consumption. Beyond that, $0.29 per image digest.',
+    count:'Usually zero. Only relevant if you scan registries without running a matching Kubernetes footprint.',
+    doc:DOC + 'defender-for-containers-introduction', docn:'Overview of Defender for Containers' },
+
+  { id:'sqlAz', f:'data', n:'Defender for SQL — Azure-connected or Arc', p:15.00, u:'instance', input:true,
+    short:'Vulnerability assessment and behavioural threat protection across the whole Azure SQL family, including Arc-enabled servers anywhere.',
+    caps:['SQL vulnerability assessment','Anomalous database access detection','SQL injection detection',
+          'Brute-force attack alerting','Data classification integration','Covers Arc-enabled SQL anywhere'],
+    bill:'Applies to Azure SQL Database, Managed Instance, elastic pools, Synapse dedicated SQL pools, SQL on Azure VMs, and Arc-enabled SQL.',
+    count:'Count SQL <b>instances</b>, not databases. An elastic pool or a managed instance is one billable instance.',
+    doc:DOC + 'defender-for-sql-introduction', docn:'Overview of Defender for SQL' },
+
+  { id:'sqlOut', f:'data', n:'Defender for SQL — outside Azure, not Arc-enabled', p:10.95, u:'vCore', input:true,
+    short:'The same SQL protection for servers that are neither in Azure nor Arc-enabled. Note that the billing unit changes.',
+    caps:['SQL vulnerability assessment','Anomalous database access detection','SQL injection detection','Brute-force attack alerting'],
+    bill:'Priced <b>per vCore</b> rather than per instance. A 16-core server costs $175.20 a month, not $10.95 — the easiest line in the catalogue to under-estimate.',
+    count:'Total vCores across non-Arc SQL servers. Arc-enabling them moves you to the cheaper per-instance rate above.',
+    doc:DOC + 'defender-for-sql-introduction', docn:'Overview of Defender for SQL' },
+
+  { id:'mysql', f:'data', n:'Defender for MySQL', p:15.00, u:'instance', input:true,
+    short:'Threat protection for Azure Database for MySQL, on both flexible and single server deployments.',
+    caps:['Anomalous database access','Brute-force attack detection','Suspicious query patterns','Unusual data extraction alerts'],
+    bill:'Flat per instance per month.',
+    count:'One per MySQL server instance.',
+    doc:DOC + 'defender-for-databases-introduction', docn:'Overview of Defender for open-source relational databases' },
+
+  { id:'pg', f:'data', n:'Defender for PostgreSQL', p:15.00, u:'instance', input:true,
+    short:'Threat protection for Azure Database for PostgreSQL, on both flexible and single server deployments.',
+    caps:['Anomalous database access','Brute-force attack detection','Suspicious query patterns','Unusual data extraction alerts'],
+    bill:'Flat per instance per month.',
+    count:'One per PostgreSQL server instance.',
+    doc:DOC + 'defender-for-databases-introduction', docn:'Overview of Defender for open-source relational databases' },
+
+  { id:'ossOut', f:'data', n:'Open-source relational DBs — outside Azure', p:15.0001, u:'instance', input:true,
+    short:'The same open-source database protection for MySQL, PostgreSQL and MariaDB hosted outside Azure.',
+    caps:['Anomalous database access','Brute-force attack detection','Suspicious query patterns','Unusual data extraction alerts'],
+    bill:'Effectively the same $15 per instance as the in-Azure rate.',
+    count:'One per database server instance running outside Azure.',
+    doc:DOC + 'defender-for-databases-introduction', docn:'Overview of Defender for open-source relational databases' },
+
+  { id:'cosmos', f:'data', n:'Defender for Azure Cosmos DB', p:0.8760, u:'100 RU/s', input:true,
+    short:'The only database plan metered on throughput rather than instance count, so sizing works differently.',
+    caps:['SQL injection detection','Anomalous access patterns','Suspicious data extraction','Compromised identity alerts'],
+    bill:'Metered on <b>provisioned throughput</b>. Serverless accounts convert total RU at a factor of 0.00003125.',
+    count:'Enter total provisioned throughput in units of 100 RU/s. A 40,000 RU/s account is 400 units.',
+    doc:DOC + 'concept-defender-for-cosmos', docn:'Overview of Defender for Azure Cosmos DB' },
+
+  { id:'stor', f:'storage', n:'Defender for Storage', p:10.00, u:'storage account', input:true,
+    short:'Detects malicious uploads, suspicious access and sensitive-data exposure across Blob, Files and Data Lake Gen2. Billed per storage account.',
+    caps:['Activity and control-plane threat detection','Suspicious access and SAS token abuse detection',
+          'Hash reputation analysis (Blob and Files)','Sensitive data threat detection — included, no extra charge',
+          'Anonymous access anomaly detection','Entity behaviour analytics'],
+    bill:'Flat per storage account, metered hourly at $0.0134. <b>Sensitive data threat detection is included at no additional cost</b> — Malware Scanning is the only paid add-on. Accounts exceeding <b>73 million monthly transactions</b> add $0.1492 per additional million.',
+    count:'One per storage account in scope. The legacy per-transaction plan, Defender for Storage (classic), <b>can no longer be newly enabled</b> as of 5 February 2025.',
+    doc:DOC + 'defender-for-storage-introduction', docn:'Overview of Defender for Storage' },
+
+  { id:'storTxn', f:'storage', n:'Storage transaction overage', p:0.1492, u:'1M txn over 73M', input:true,
+    short:'Applies to accounts on the current plan whose monthly transaction volume passes the included threshold.',
+    caps:['Charged per additional million transactions','Assessed per storage account',
+          'Counts internal operations such as Blob lifecycle management'],
+    bill:'$0.1492 per million transactions <b>above 73 million</b> in a month, per account. Blob lifecycle-management operations count toward the total, so policy-heavy accounts reach it sooner than expected.',
+    count:'Usually zero. Enter the number of millions above the threshold, summed across accounts.',
+    doc:DOC + 'defender-for-storage-introduction', docn:'Overview of Defender for Storage' },
+
+  { id:'malware', f:'storage', n:'Malware Scanning add-on', p:0.15, u:'GB scanned', input:true,
+    short:'The only paid add-on to Defender for Storage. Scans blobs on upload or on demand, and bills per GB scanned.',
+    caps:['On-upload malware scanning','On-demand scanning of existing blobs','Near real-time detection',
+          'Blob index tag results','Event Grid integration','Configurable monthly GB cap per account'],
+    bill:'Charged <b>from day one</b> — unlike the rest of Defender for Cloud there is no 30-day free period. Supports <b>Azure Blob Storage only</b>; on-upload scanning is not available for Azure Files.',
+    count:'Estimate GB uploaded and scanned per month, not GB stored. A <b>10,000 GB per account per month cap applies by default</b> — left at that ceiling a single account could bill $1,500 a month, so set the cap deliberately.',
+    doc:DOC + 'introduction-malware-scanning', docn:'Malware scanning in Defender for Storage' },
+
+  { id:'ai', f:'storage', n:'Defender for AI Services', p:0.0008, u:'1K tokens', input:true,
+    short:'Prompt injection and model-abuse detection for Azure OpenAI and Azure AI Services workloads.',
+    caps:['Prompt injection detection','Data leakage detection','Wallet abuse alerting','Suspicious model access','Credential theft detection'],
+    bill:'Metered on tokens inspected. The trial ends at 30 days or 75 billion tokens, whichever comes first.',
+    count:'Enter <b>thousands of tokens</b> inspected per month. One million tokens a month is 1,000 units.',
+    doc:DOC + 'ai-threat-protection', docn:'AI threat protection' },
+
+  { id:'appsvc', f:'service', n:'Defender for App Service', p:14.60, u:'instance', input:true,
+    short:'Detects exploitation attempts against web apps and the App Service infrastructure running beneath them.',
+    caps:['Web app exploitation detection','Dangling DNS detection','Suspicious process execution','Known attack pattern alerts'],
+    bill:'Per App Service instance — billed on the compute instances actually running your apps.',
+    count:'Count App Service plan instances, not individual apps.',
+    doc:DOC + 'defender-for-app-service-introduction', docn:'Overview of Defender for App Service' },
+
+  { id:'kv', f:'service', n:'Defender for Key Vault', p:0.25, u:'vault', input:true,
+    short:'The cheapest plan in the catalogue and often the highest-signal — unusual secret access is a reliable breach indicator.',
+    caps:['Unusual secret access patterns','Suspicious access from Tor exit nodes','Anomalous application access','Unusual operation volume'],
+    bill:'Flat per vault per month. At 25 cents it is rarely worth excluding from scope.',
+    count:'One per key vault.',
+    doc:DOC + 'defender-for-key-vault-introduction', docn:'Overview of Defender for Key Vault' },
+
+  { id:'arm', f:'service', n:'Defender for Resource Manager', p:5.04, u:'subscription', input:true,
+    short:'Watches the Azure control plane itself — the layer an attacker reaches once they already hold credentials.',
+    caps:['Suspicious resource management operations','Exploitation toolkit detection','Privilege escalation alerting','Suspicious invocation from risky IPs'],
+    bill:'Per subscription, so cost scales with subscription count rather than resource count.',
+    count:'One per Azure subscription in scope.',
+    doc:DOC + 'defender-for-resource-manager-introduction', docn:'Overview of Defender for Resource Manager' },
+
+  { id:'dns', f:'service', n:'Defender for DNS', p:0.70, u:'1M queries', input:true,
+    short:'Detects DNS-based exfiltration, communication with malicious domains and DNS tunnelling from Azure resources.',
+    caps:['Data exfiltration over DNS','Communication with malicious domains','DNS tunnelling detection','Cryptomining domain alerts'],
+    bill:'Metered per million DNS queries resolved by Azure DNS.',
+    count:'Enter millions of DNS queries per month across in-scope resources.',
+    doc:DOC + 'defender-for-resource-manager-introduction', docn:'Defender for Cloud plans' },
+
+  { id:'api1', f:'apis', n:'Defender for APIs — Plan 1', p:200.02, u:'subscription', input:true,
+    short:'Discovers and protects APIs published through Azure API Management. Banded by monthly call volume.',
+    caps:['API inventory and discovery','Sensitive data exposure detection','Unauthenticated endpoint discovery',
+          'Runtime attack detection','OWASP API risk coverage'],
+    bill:'Up to <b>1 million API calls</b> per subscription per month. Overage beyond the entitlement bills at $0.0002 per call.',
+    count:'One per subscription placed on this band.',
+    doc:DOC + 'defender-for-apis-introduction', docn:'Overview of Defender for APIs' },
+
+  { id:'api2', f:'apis', n:'Defender for APIs — Plan 2', p:700.00, u:'subscription', input:true,
+    short:'The second API volume band, for subscriptions serving up to five million calls a month.',
+    caps:['API inventory and discovery','Sensitive data exposure detection','Unauthenticated endpoint discovery',
+          'Runtime attack detection','OWASP API risk coverage'],
+    bill:'Up to <b>5 million API calls</b> per subscription per month. Overage bills at $0.00014 per call.',
+    count:'One per subscription placed on this band.',
+    doc:DOC + 'defender-for-apis-introduction', docn:'Overview of Defender for APIs' },
+
+  { id:'api3', f:'apis', n:'Defender for APIs — Plan 3', p:4999.99, u:'subscription', input:true,
+    short:'The mid volume band, for subscriptions serving up to fifty million calls a month.',
+    caps:['API inventory and discovery','Sensitive data exposure detection','Unauthenticated endpoint discovery',
+          'Runtime attack detection','OWASP API risk coverage'],
+    bill:'Up to <b>50 million API calls</b> per subscription per month. Overage bills at $0.0001 per call.',
+    count:'One per subscription placed on this band.',
+    doc:DOC + 'defender-for-apis-introduction', docn:'Overview of Defender for APIs' },
+
+  { id:'api4', f:'apis', n:'Defender for APIs — Plan 4', p:6999.97, u:'subscription', input:true,
+    short:'For subscriptions serving up to one hundred million API calls a month.',
+    caps:['API inventory and discovery','Sensitive data exposure detection','Unauthenticated endpoint discovery',
+          'Runtime attack detection','OWASP API risk coverage'],
+    bill:'Up to <b>100 million API calls</b> per subscription per month. Overage bills at $0.00007 per call.',
+    count:'One per subscription placed on this band.',
+    doc:DOC + 'defender-for-apis-introduction', docn:'Overview of Defender for APIs' },
+
+  { id:'api5', f:'apis', n:'Defender for APIs — Plan 5', p:50000.04, u:'subscription', input:true,
+    short:'The top volume band, for subscriptions serving up to one billion API calls a month.',
+    caps:['API inventory and discovery','Sensitive data exposure detection','Unauthenticated endpoint discovery',
+          'Runtime attack detection','OWASP API risk coverage'],
+    bill:'Up to <b>1 billion API calls</b> per subscription per month. Overage bills at $0.00005 per call.',
+    count:'One per subscription placed on this band.',
+    doc:DOC + 'defender-for-apis-introduction', docn:'Overview of Defender for APIs' }
+];
+
+/* P3 tiers. 1 DCU = $1 USD of list consumption. */
+const TIERS = [
+  { t:1,  dcu:5000,   disc:0.10, price:4500 },
+  { t:2,  dcu:10000,  disc:0.12, price:8800 },
+  { t:3,  dcu:25000,  disc:0.14, price:21500 },
+  { t:4,  dcu:50000,  disc:0.16, price:42000 },
+  { t:5,  dcu:75000,  disc:0.17, price:62250 },
+  { t:6,  dcu:100000, disc:0.18, price:82000 },
+  { t:7,  dcu:150000, disc:0.19, price:121500 },
+  { t:8,  dcu:200000, disc:0.20, price:160000 },
+  { t:9,  dcu:275000, disc:0.21, price:217250 },
+  { t:10, dcu:350000, disc:0.22, price:273000 }
+];
+
+const INPUTS = SERVICES.filter(s => s.input);
+const SAMPLE = { cspm:450, srv1:120, srv2:280, cont:640, sqlAz:45, mysql:12, pg:8,
+                 stor:90, malware:2500, appsvc:35, kv:60, arm:14, api1:3, cosmos:400 };
+const OPEN_BY_DEFAULT = ['posture', 'servers'];
+
+/* Azure's published conversion rate — fallback only. The page pulls the live figure
+   from the Azure pricing page on load. Verified against the Retail Prices API: every
+   Canada Central CAD price equals the East US USD price multiplied by this figure,
+   including the DCU tiers. */
+const AZURE_FX = 1.38605;
+const PRICE_STAMP = '30 September 2026';
+const REGION = { USD:'East US', CAD:'Canada Central' };
+const TERM_MONTHS = 12;                    // commit units expire 12 months after each purchase
+const DAYS_PER_MONTH = 365.25 / 12;
+
+/* ════════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════════ */
+const state = {
+  qty:     Object.fromEntries(INPUTS.map(s => [s.id, 0])),
+  cur:'CAD', fx:AZURE_FX, live:false,
+  optMode:'horizon',                        // 'horizon' = size for 12 months · 'runrate' = re-buy cycle
+  open: new Set(OPEN_BY_DEFAULT)
+};
+
+const $ = id => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+const esc = s => String(s).replace(/"/g, '&quot;');
+
+/* ── formatting ─────────────────────────────────────────────────── */
+function conv(usd){ return state.cur === 'CAD' ? usd * state.fx : usd; }
+/* Currency is established once in Section 01 and repeated under each KPI tile,
+   so figures use a bare $ regardless of basis. */
+function sym(){ return '$'; }
+function fmt(v, d){ return v.toLocaleString('en-US', { minimumFractionDigits:d, maximumFractionDigits:d }); }
+
+function money(usd, dp){
+  const v = conv(usd);
+  const d = dp === undefined ? (Math.abs(v) < 100 && v !== 0 ? 2 : 0) : dp;
+  return sym() + fmt(v, d);
+}
+/* Headline tiles: exact dollars, and never a CA prefix. */
+function moneyExact(usd){
+  const v = conv(usd);
+  return (v < 0 ? '\u2212$' : '$') + fmt(Math.abs(v), 0);
+}
+function moneyPrecise(usd){
+  const v = conv(usd);
+  let d = 2;
+  if (Math.abs(v) > 0 && Math.abs(v) < 0.01) d = 5;
+  else if (Math.abs(v) < 1) d = 4;
+  return sym() + fmt(v, d);
+}
+function compact(usd){
+  const v = conv(usd), a = Math.abs(v), s = v < 0 ? '\u2212' : '';
+  if (a >= 1e6) return s + sym() + (a/1e6).toFixed(a >= 1e7 ? 1 : 2) + 'M';
+  if (a >= 1e3) return s + sym() + Math.round(a/1e3) + 'K';
+  return s + sym() + Math.round(a);
+}
+const int = n => Math.round(n).toLocaleString('en-US');
+/* Round before deciding on decimals so float noise (0.1*100 = 10.000000000000002)
+   doesn't produce an inconsistent "10.0%" next to "12%". */
+const pct = f => {
+  const v = Math.round(f * 1000) / 10;
+  return (Math.abs(v % 1) < 0.001 ? v.toFixed(0) : v.toFixed(1)) + '%';
+};
+/* Months to one decimal, without a trailing ".0". */
+const mo = x => { const v = Math.round(x * 10) / 10; return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)); };
+const moLabel = x => mo(x) + (Math.abs(x - 1) < 0.05 ? ' month' : ' months');
+function dateAt(months){
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + Math.round(months * DAYS_PER_MONTH));
+  return d;
+}
+const fmtDate = d => d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+
+/* ════════════════════════════════════════════════════════════════════
+   MODEL
+   ════════════════════════════════════════════════════════════════════ */
+/* Pay-as-you-go is always modelled at published list price — this build carries
+   no discount controls, so every line prices at 0% concession. */
+function discountFor(){ return 0; }
+
+/* Commit tiers price at the published volume discount only — no negotiated
+   concession is modelled on top. */
+function p3DiscFor(){ return 0; }
+
+function computeLines(){
+  return INPUTS.map(s => {
+    const qty    = Math.max(0, state.qty[s.id] || 0);
+    const listYr = qty * s.p * 12;
+    const disc   = discountFor(s.id);
+    return { s, qty, listYr, disc, paygoYr: listYr * (1 - disc) };
+  });
+}
+
+/**
+ * Cheapest way to cover `need` commit units.
+ * cost = commit price (each tier less its own negotiated discount) + uncovered
+ * spend at the blended pay-go rate. Over-committing is self-penalising: the
+ * commit price is paid in full whether or not the units get consumed.
+ */
+function optimise(need, blendedRate){
+  const top = TIERS[TIERS.length - 1];
+  let best = null;
+
+  const consider = counts => {
+    let committed = 0, gross = 0, commitCost = 0;
+    for (let i = 0; i < TIERS.length; i++){
+      if (!counts[i]) continue;
+      const t = TIERS[i];
+      committed  += t.dcu   * counts[i];
+      gross      += t.price * counts[i];
+      commitCost += t.price * counts[i] * (1 - p3DiscFor(t));
+    }
+    const uncovered = Math.max(0, need - committed);
+    const total     = commitCost + uncovered * blendedRate;
+    if (!best || total < best.total - 1e-6){
+      best = { counts:counts.slice(), committed, gross, commitCost, uncovered,
+               wasted:Math.max(0, committed - need), total };
+    }
+  };
+
+  const zero = TIERS.map(() => 0);
+  consider(zero);                                   // baseline: no commitment
+
+  const bulk = Math.floor(need / top.dcu);
+  for (let n = Math.max(0, bulk - 1); n <= bulk + 1; n++){
+    const base = zero.slice();
+    base[TIERS.length - 1] = n;
+    consider(base);
+    for (let i = 0; i < TIERS.length; i++){
+      const one = base.slice(); one[i]++;
+      consider(one);
+      for (let j = i; j < TIERS.length; j++){
+        const two = one.slice(); two[j]++;
+        consider(two);
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Run-rate optimiser. Instead of sizing one purchase to a year of consumption,
+ * buy a single tier and re-buy it each time the balance is exhausted. Every
+ * lot is used in full provided it burns down inside its 12-month term, so the
+ * cost per $1 of consumption is simply that tier's net unit price. A tier
+ * bigger than a year's burn is re-bought annually and the remainder expires.
+ * A stack of tiers can never beat the single best tier that fits, because its
+ * unit price is a weighted average of the tiers in it.
+ */
+function tierRunRate(t, monthly){
+  const net      = t.price * (1 - p3DiscFor(t));
+  const unitNet  = net / t.dcu;
+  const lasts    = monthly > 0 ? t.dcu / monthly : Infinity;   // months to burn one lot
+  const cycle    = Math.min(lasts, TERM_MONTHS);                // re-buy interval
+  const yearBurn = monthly * TERM_MONTHS;
+  const wasted   = Math.max(0, t.dcu - yearBurn);               // expires unused, per lot
+  const annual   = net * (TERM_MONTHS / cycle);                 // prorated 12-month cost
+  return { tier:t, net, unitNet, lasts, cycle, wasted, annual, buysYr: TERM_MONTHS / cycle };
+}
+
+function optimiseRunRate(need, blendedRate){
+  const monthly = need / TERM_MONTHS;
+  const paygo   = need * blendedRate;
+  const all     = TIERS.map(t => tierRunRate(t, monthly));
+  let pick = null;
+  all.forEach(r => {
+    // ties go to the larger tier: same cost, fewer purchase orders
+    if (!pick || r.annual < pick.annual - 1e-6 || Math.abs(r.annual - pick.annual) <= 1e-6) pick = r;
+  });
+  const zero = TIERS.map(() => 0);
+  if (!pick || paygo <= pick.annual + 1e-6 || monthly <= 0){
+    return { counts:zero, committed:0, gross:0, commitCost:0, uncovered:need, wasted:0, total:paygo,
+             rr:null, all, monthly };
+  }
+  const counts = zero.slice(); counts[TIERS.indexOf(pick.tier)] = 1;
+
+  // First 12 months of cash: a purchase today, then one every `cycle` months.
+  const buysInYear = Math.max(1, Math.ceil(TERM_MONTHS / pick.cycle - 1e-9));
+  const cashYr1    = buysInYear * pick.net;
+  const carryUnits = pick.lasts > TERM_MONTHS ? 0 : buysInYear * pick.tier.dcu - need;
+
+  // When the top tier burns in well under a year, several can be bought at once at the same rate.
+  let bundle = null;
+  if (pick.tier === TIERS[TIERS.length - 1] && pick.lasts < TERM_MONTHS / 2){
+    const n = Math.floor(TERM_MONTHS / pick.lasts);
+    if (n > 1) bundle = { n, units:n * pick.tier.dcu, cost:n * pick.net, cycle:n * pick.lasts };
+  }
+
+  return { counts, committed:pick.tier.dcu, gross:pick.tier.price, commitCost:pick.net,
+           uncovered:0, wasted:pick.wasted, total:pick.annual,
+           rr:Object.assign({}, pick, { monthly, buysInYear, cashYr1, carryUnits, bundle }), all, monthly };
+}
+
+function model(){
+  const lines   = computeLines();
+  const listYr  = lines.reduce((a, l) => a + l.listYr,  0);
+  const paygoYr = lines.reduce((a, l) => a + l.paygoYr, 0);
+
+  // What $1 of uncovered list consumption actually costs at pay-go.
+  const blended = listYr > 0 ? paygoYr / listYr : 1;
+
+  const need = listYr;                              // 1 DCU = $1 of list consumption
+  const hz   = optimise(need, blended);
+  const rrOpt = optimiseRunRate(need, blended);
+  const runrate = state.optMode === 'runrate';
+  const opt  = runrate ? rrOpt : hz;
+  const alt  = runrate ? hz : rrOpt;               // the other mode, for comparison
+
+  const p3Yr     = opt.total;
+  const saving   = paygoYr - p3Yr;
+  const effDisc  = listYr > 0 ? 1 - (p3Yr / listYr)    : 0;
+  const paygoEff = listYr > 0 ? 1 - (paygoYr / listYr) : 0;
+
+  // Published volume discount vs the all-in rate once negotiation is applied.
+  const tierDisc  = opt.committed > 0 ? 1 - (opt.gross / opt.committed)      : 0;
+  const totalDisc = opt.committed > 0 ? 1 - (opt.commitCost / opt.committed) : 0;
+  const negotiated = opt.gross > 0 ? 1 - (opt.commitCost / opt.gross) : 0;
+
+  const purchases = opt.counts
+    .map((c, i) => ({ tier:TIERS[i], count:c }))
+    .filter(x => x.count > 0);
+
+  return { lines, listYr, paygoYr, blended, need, opt, p3Yr, saving,
+           effDisc, paygoEff, committed:opt.committed,
+           tierDisc, totalDisc, negotiated, purchases,
+           runrate, rr:runrate ? opt.rr : null, alt, hz, rrOpt };
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SERVICE EXPLORER
+   ════════════════════════════════════════════════════════════════════ */
+const explorer = (function(){
+  let fam = 'posture', cur = 'cspm';           // default to Defender CSPM
+  const seg = $('segBar'), pills = $('pillRow'), spot = $('spot');
+
+  seg.innerHTML = FAMS.map(f =>
+    '<button role="tab" data-f="' + f.id + '" style="--tc:' + f.c + '">' + f.label +
+    '<span class="cnt">' + SERVICES.filter(s => s.f === f.id).length + '</span></button>').join('');
+
+  function drawPills(){
+    const items = SERVICES.filter(s => s.f === fam);
+    if (!items.some(s => s.id === cur)) cur = items[0].id;
+    pills.style.setProperty('--tc', FAM[fam].c);
+    pills.innerHTML = items.map(s =>
+      '<button data-id="' + s.id + '"' + (s.id === cur ? ' class="on"' : '') + '>' + s.n + '</button>').join('');
+    seg.querySelectorAll('button').forEach(b => {
+      const on = b.dataset.f === fam;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  function drawSpot(){
+    const s = SERVICES.find(x => x.id === cur), f = FAM[s.f];
+    spot.style.setProperty('--c', f.c);
+    spot.innerHTML =
+      '<div>' +
+        '<div class="dfam"><span class="dm"></span>' + f.label + '</div>' +
+        '<h3 class="dname">' + s.n + '</h3>' +
+        '<p class="dshort">' + s.short + '</p>' +
+        '<div class="dsec">What it gives you</div>' +
+        '<div class="caps">' + s.caps.map(c => '<div class="cap"><i></i>' + c + '</div>').join('') + '</div>' +
+        '<div class="dsec">How it bills</div>' +
+        '<div class="dbill">' + s.bill + '</div>' +
+      '</div>' +
+      '<div class="spotside">' +
+        '<div class="sslab">List price</div>' +
+        '<div class="bigprice">' + (s.p > 0 ? moneyPrecise(s.p) : 'Free') + '</div>' +
+        '<div class="bigunit">' + (s.p > 0 ? 'per ' + s.u + ' / month' : s.u) + '</div>' +
+        '<div class="countbox"><div class="sslab">What you count</div>' +
+          '<div class="cx">' + s.count + '</div></div>' +
+        '<div class="learnbtn"><a href="' + s.doc + '" target="_blank" rel="noopener">' +
+          '<span class="ms"><i></i><i></i><i></i><i></i></span>' +
+          '<span class="lt"><span class="l1">' + s.docn + '</span>' +
+          '<span class="l2">Microsoft Learn</span></span><span class="ar">&#8599;</span></a></div>' +
+      '</div>';
+  }
+
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button[data-f]'); if (!b) return;
+    fam = b.dataset.f; drawPills(); drawSpot();
+  });
+  pills.addEventListener('click', e => {
+    const b = e.target.closest('button[data-id]'); if (!b) return;
+    cur = b.dataset.id; drawPills(); drawSpot();
+  });
+
+  return { redraw(){ drawPills(); drawSpot(); } };
+})();
+
+/* ════════════════════════════════════════════════════════════════════
+   SCOPE BUILDER
+   ════════════════════════════════════════════════════════════════════ */
+const unitLabel = s => moneyPrecise(s.p) + ' / ' + s.u + ' / mo';
+
+function buildGroups(){
+  const host = $('groups');
+  host.innerHTML = FAMS.map(f => {
+    const svcs = INPUTS.filter(s => s.f === f.id);
+    if (!svcs.length) return '';
+    const open = state.open.has(f.id);
+    return '<div class="grp' + (open ? ' open' : '') + '" data-g="' + f.id + '" style="--gc:' + f.c + '">' +
+      '<button class="ghead" data-toggle="' + f.id + '" aria-expanded="' + open + '">' +
+        '<span class="chev"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></span>' +
+        '<span class="gt">' + f.label + '</span>' +
+        '<span class="gc2">' + svcs.length + ' plan' + (svcs.length > 1 ? 's' : '') + '</span>' +
+        '<span class="gsum" data-sum="' + f.id + '">—</span></button>' +
+      '<div class="gbody"><div class="gin">' +
+        '<div class="rowhead"><span>Plan</span><span>Quantity</span><span>List / month</span></div>' +
+        svcs.map(s =>
+          '<div class="row" data-row="' + s.id + '">' +
+            '<div class="rn"><div class="n">' + s.n + '</div>' +
+              '<div class="u"><em>' + unitLabel(s) + '</em></div></div>' +
+            '<input type="number" min="0" step="1" value="0" data-q="' + s.id + '" aria-label="' + esc(s.n) + ' quantity">' +
+            '<div class="rc" data-cost="' + s.id + '">—</div>' +
+          '</div>').join('') +
+      '</div></div></div>';
+  }).join('');
+
+  host.addEventListener('input', e => {
+    const id = e.target.dataset.q;
+    if (!id) return;
+    state.qty[id] = Math.max(0, num(e.target.value));
+    refresh();
+  });
+  host.addEventListener('click', e => {
+    const b = e.target.closest('[data-toggle]'); if (!b) return;
+    const g = b.dataset.toggle;
+    if (state.open.has(g)) state.open.delete(g); else state.open.add(g);
+    const grp = host.querySelector('.grp[data-g="' + g + '"]');
+    grp.classList.toggle('open', state.open.has(g));
+    b.setAttribute('aria-expanded', state.open.has(g));
+    syncExpandBtn();
+  });
+}
+
+function syncExpandBtn(){
+  $('btnExpand').textContent = state.open.size === FAMS.length ? 'Collapse all' : 'Expand all';
+}
+function applyOpenState(){
+  document.querySelectorAll('.grp').forEach(g => {
+    const on = state.open.has(g.dataset.g);
+    g.classList.toggle('open', on);
+    g.querySelector('.ghead').setAttribute('aria-expanded', on);
+  });
+  syncExpandBtn();
+}
+function setAllGroups(open){
+  state.open = open ? new Set(FAMS.map(f => f.id)) : new Set();
+  applyOpenState();
+}
+function openGroupsWithValues(){
+  INPUTS.forEach(s => { if ((state.qty[s.id] || 0) > 0) state.open.add(s.f); });
+  applyOpenState();
+}
+
+function buildTierRef(){
+  $('tierRef').querySelector('tbody').innerHTML = TIERS.map(t =>
+    '<tr><td>Tier ' + t.t + '</td><td>' + int(t.dcu) + '</td><td class="disc">' + pct(t.disc) + '</td>' +
+    '<td data-m="' + t.price + '">—</td>' +
+    '<td data-m="' + (t.price / t.dcu) + '" data-dp="4">—</td>' +
+    '<td data-m="' + t.dcu + '">—</td></tr>').join('');
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RENDER
+   ════════════════════════════════════════════════════════════════════ */
+function refresh(){
+  const m = model();
+
+  const byGroup = {};
+  m.lines.forEach(l => {
+    const cell = document.querySelector('[data-cost="' + l.s.id + '"]');
+    const row  = document.querySelector('[data-row="' + l.s.id + '"]');
+    const mo   = l.listYr / 12;
+    if (cell) cell.innerHTML = l.qty > 0
+      ? money(mo) + '<small>' + money(l.listYr) + ' / yr</small>' : '—';
+    if (row) row.classList.toggle('act', l.qty > 0);
+    byGroup[l.s.f] = (byGroup[l.s.f] || 0) + mo;
+  });
+  FAMS.forEach(f => {
+    const el = document.querySelector('[data-sum="' + f.id + '"]');
+    if (el) el.innerHTML = byGroup[f.id] > 0 ? '<b>' + money(byGroup[f.id]) + '</b> / mo' : '—';
+  });
+
+  document.querySelectorAll('[data-m]').forEach(td => {
+    td.textContent = td.dataset.dp
+      ? sym() + conv(+td.dataset.m).toFixed(+td.dataset.dp)
+      : money(+td.dataset.m, 0);
+  });
+
+  const has  = m.listYr > 0;
+  const good = m.saving > 0.005;
+  const cc   = state.cur + ' · ' + REGION[state.cur];
+
+  $('kPayg').textContent = has ? moneyExact(m.paygoYr) : '—';
+  $('kPaygN').innerHTML  = has ? 'Full list price' : 'per year';
+  $('kPaygC').textContent = has ? cc : '';
+
+  $('kP3').textContent = has ? moneyExact(m.p3Yr) : '—';
+  $('kP3N').innerHTML  = has
+    ? (m.committed > 0
+        ? (m.rr
+            ? '<b>Tier ' + m.rr.tier.t + '</b> every <b>' + moLabel(m.rr.cycle) + '</b> · ' + money(m.p3Yr / 12) + ' / mo'
+            : '<b>' + int(m.committed) + '</b> units at ' + pct(m.totalDisc))
+        : 'No commitment is cheaper here')
+    : (m.runrate ? 'per year, prorated' : 'per year');
+  $('kP3').parentElement.querySelector('.dl').textContent =
+    m.runrate ? 'Pre-Purchase · run rate' : 'Pre-Purchase Plan';
+  $('kP3C').textContent = has ? cc + (m.runrate ? ' · prorated 12 mo' : '') : '';
+
+  $('kSave').textContent = has ? moneyExact(m.saving) : '—';
+  const saveTile = $('kSave').parentElement;
+  saveTile.className = 'delta ' + (has && !good ? 'warn' : 'hero');
+  saveTile.style.setProperty('--dc', has && !good ? 'var(--neg)' : 'var(--s5)');
+  $('kSaveN').innerHTML = has
+    ? (good ? '<b>' + pct(m.saving / m.paygoYr) + '</b> below pay-as-you-go' : 'Pay-as-you-go is cheaper here')
+    : 'versus pay-as-you-go';
+  $('kSaveC').textContent = has ? cc : '';
+
+  $('kEff').textContent = has ? pct(m.effDisc) : '—';
+  $('kEffN').innerHTML  = 'against list price';
+
+  $('mbPayg').textContent = has ? compact(m.paygoYr) : '—';
+  $('mbP3').textContent   = has ? compact(m.p3Yr)    : '—';
+  $('mbSave').textContent = has && good ? compact(m.saving) : '—';
+  $('mbDcu').textContent  = m.committed > 0 ? int(m.committed) : '—';
+
+  renderVerdict(m, has, good);
+  renderRebuy(m, has, good);
+  renderAltTip(m, has);
+  renderBars(m, has);
+  renderLines(m);
+  renderFit(m, has);
+
+  $('anSub').innerHTML = m.runrate
+    ? 'Run-rate mode takes your <b>monthly list consumption</b> as the burn rate, then finds the tier with the lowest net ' +
+      'cost per unit that can be fully consumed inside its 12-month term. You re-buy that tier each time the balance runs ' +
+      'out, so annual figures below are <b>prorated to 12 months</b> of steady-state spend.'
+    : 'The optimiser sizes twelve months of list consumption, then tests every tier, every two-tier combination and every bulk ' +
+      'multiple of the top tier to find the lowest total cost. Consumption beyond the commit balance settles at pay-as-you-go.';
+}
+
+/* Cheapest way to commit at all, for explaining why pay-as-you-go wins. */
+function cheapestCommit(m){
+  return Math.min.apply(null, TIERS.map(t => m.runrate
+    ? tierRunRate(t, m.need / TERM_MONTHS).annual
+    : t.price * (1 - p3DiscFor(t)) + Math.max(0, m.need - t.dcu) * m.blended));
+}
+
+function renderVerdict(m, has, good){
+  const v = $('verdict'), cards = $('buyCards');
+
+  if (!has){
+    v.className = 'verdict';
+    $('vTitle').textContent = 'Enter a scope to model';
+    $('vBadge').textContent = 'Awaiting input';
+    $('vBody').textContent  = 'Fill in Section 04 and the recommendation appears here, including exactly which tiers to buy.';
+    cards.innerHTML = '';
+    return;
+  }
+
+  if (m.committed === 0){
+    v.className = 'verdict bad';
+    $('vTitle').textContent = 'Pay-as-you-go is cheaper at this scope';
+    $('vBadge').textContent = 'No commitment';
+    $('vBody').innerHTML =
+      'Forecast consumption of <b>' + int(m.need) + ' units</b> (' + money(m.need) + ' of list spend) sits below the smallest tier of 5,000 units, so every tier over-commits. ' +
+      'The cheapest commitment would cost <b>' + money(Math.max(0, cheapestCommit(m) - m.paygoYr)) + ' more</b> across the year.';
+    cards.innerHTML = '';
+    return;
+  }
+
+  if (m.rr){ renderVerdictRunRate(m, good); return; }
+
+  v.className = 'verdict ' + (good ? 'good' : 'bad');
+  const label = m.purchases.map(p => p.count + ' × ' + int(p.tier.dcu)).join('  +  ');
+  $('vTitle').textContent = good ? 'Commit ' + int(m.committed) + ' units' : 'Commitment available, but it costs more';
+  $('vBadge').textContent = good ? 'Saves ' + pct(m.saving / m.paygoYr) : 'More than pay-as-you-go';
+
+  const tail = m.opt.wasted > 0
+    ? ' It over-commits by <b>' + int(m.opt.wasted) + ' units</b> (' + money(m.opt.wasted) +
+      ' of balance that would go unused) — still the cheapest structure available, and absorbed by any growth in the estate.'
+    : (m.opt.uncovered > 0
+        ? ' The remaining <b>' + money(m.opt.uncovered) + '</b> of consumption settles at pay-as-you-go.'
+        : ' The commitment matches the forecast almost exactly.');
+
+  const breakEven = (m.blended > 0 && m.committed > 0)
+    ? (m.opt.commitCost / m.blended) / m.committed : null;
+
+  $('vBody').innerHTML =
+    'Forecast consumption is <b>' + money(m.need) + '</b> of list-price Defender for Cloud spend over twelve months. ' +
+    'The lowest-cost structure is <b>' + label + ' units</b> for <b>' + money(m.opt.commitCost) + '</b>.' + tail +
+    (good ? '' : ' Even so, it lands <b>' + money(-m.saving) + ' above</b> your pay-as-you-go run rate.');
+
+  cards.innerHTML =
+    '<div class="buyc"><div class="bt">Commit units</div><div class="bv">' + int(m.committed) + '</div>' +
+      '<div class="bn">' + label + '</div></div>' +
+    '<div class="buyc"><div class="bt">Up-front cost</div><div class="bv">' + moneyExact(m.opt.commitCost) + '</div>' +
+      '<div class="bn">' + pct(m.tierDisc) + ' published tier discount</div></div>' +
+    '<div class="buyc"><div class="bt">Coverage</div><div class="bv">' +
+      pct(m.need > 0 ? Math.min(1, m.committed / m.need) : 0) + '</div>' +
+      '<div class="bn">of forecast list consumption</div></div>' +
+    '<div class="buyc"><div class="bt">Break-even use</div><div class="bv">' +
+      (breakEven === null ? 'n/a' : pct(Math.min(1, breakEven))) + '</div>' +
+      '<div class="bn">of the balance must be consumed to stay ahead</div></div>';
+}
+
+function renderVerdictRunRate(m, good){
+  const r = m.rr, t = r.tier, v = $('verdict');
+  const expires = r.lasts > TERM_MONTHS + 1e-9;
+  const payMo = m.paygoYr / 12, p3Mo = m.p3Yr / 12;
+  const cents = (r.unitNet * 100).toFixed(1).replace(/\.0$/, '') + '\u00A2';
+
+  v.className = 'verdict ' + (good ? 'good' : 'bad');
+  $('vTitle').textContent = good
+    ? (expires ? 'Buy Tier ' + t.t + ' once a year' : 'Buy Tier ' + t.t + ' every ' + moLabel(r.cycle))
+    : 'Run-rate commitment available, but it costs more';
+  $('vBadge').textContent = good ? 'Saves ' + pct(m.saving / m.paygoYr) : 'More than pay-as-you-go';
+
+  $('vBody').innerHTML =
+    'Your list-price run rate is <b>' + money(r.monthly) + ' a month</b> — a burn of <b>' + int(r.monthly) +
+    ' commit units a month</b>. ' +
+    (expires
+      ? 'Even the best-value tier holds more than a year of burn, so <b>Tier ' + t.t + '</b> (' + int(t.dcu) +
+        ' units) is bought once a year and <b>' + int(r.wasted) + ' units</b> expire unused each term. '
+      : 'A <b>Tier ' + t.t + '</b> commit of <b>' + int(t.dcu) + ' units</b> lasts <b>' + moLabel(r.lasts) +
+        '</b> at that burn — inside its 12-month term — so every unit is consumed. Instead of stacking smaller tiers to ' +
+        'cover exactly twelve months, <b>re-buy Tier ' + t.t + ' each time it runs out</b>. ') +
+    'Each dollar of list consumption then costs <b>' + cents + '</b> (' + pct(1 - r.unitNet) + ' off list' +
+    (m.negotiated > 0 ? ', including your ' + pct(m.negotiated) + ' negotiated discount' : '') + '), a run rate of <b>' +
+    money(p3Mo) + ' / month</b> against ' + money(payMo) + ' at pay-as-you-go. Prorated over twelve months that is <b>' +
+    money(m.p3Yr) + '</b>.' +
+    (good ? '' : ' Even so, it lands <b>' + money(-m.saving) + ' above</b> your discounted pay-as-you-go run rate.');
+
+  $('buyCards').innerHTML =
+    '<div class="buyc"><div class="bt">Buy</div><div class="bv">Tier ' + t.t + '</div>' +
+      '<div class="bn">' + int(t.dcu) + ' units · ' + money(r.net) + ' per purchase</div></div>' +
+    '<div class="buyc"><div class="bt">Re-buy every</div><div class="bv">' + moLabel(r.cycle) + '</div>' +
+      '<div class="bn">\u2248 every ' + int(r.cycle * DAYS_PER_MONTH) + ' days · ' +
+      (Math.round(r.buysYr * 100) / 100) + ' purchases a year</div></div>' +
+    '<div class="buyc"><div class="bt">Monthly run rate</div><div class="bv">' + moneyExact(p3Mo) + '</div>' +
+      '<div class="bn">vs ' + money(payMo) + ' / mo at pay-as-you-go</div></div>' +
+    '<div class="buyc"><div class="bt">12-month projection</div><div class="bv">' + moneyExact(m.p3Yr) + '</div>' +
+      '<div class="bn">prorated · first-year cash ' + money(r.cashYr1) + ' across ' + r.buysInYear +
+      ' purchase' + (r.buysInYear > 1 ? 's' : '') + '</div></div>';
+}
+
+function renderRebuy(m, has, good){
+  const host = $('rebuy');
+  if (!has || !m.rr || !good){ host.innerHTML = ''; return; }
+  const r = m.rr, t = r.tier;
+  const expires = r.lasts > TERM_MONTHS + 1e-9;
+  const span = 24;                                           // months shown on the timeline
+  const trigger = Math.min(t.dcu, Math.round(r.monthly));    // ~one month of burn left
+  const pos = x => (Math.min(span, x) / span * 100).toFixed(3) + '%';
+
+  // Purchase schedule across the next two years.
+  const buys = [];
+  for (let i = 0; i < 40; i++){
+    const at = i * r.cycle;
+    if (at >= span - 1e-9) break;
+    buys.push({ i, at, end: at + Math.min(r.lasts, TERM_MONTHS) });
+  }
+
+  let tl = '<div class="tl"><div class="axis"></div>';
+  buys.forEach((b, k) => {
+    tl += '<div class="lot" style="left:' + pos(b.at) + ';width:calc(' + pos(b.end) + ' - ' + pos(b.at) + ' - 2px);' +
+          'opacity:' + (k % 2 ? .62 : 1) + '"></div>';
+  });
+  const labelTicks = r.cycle >= 1.5;
+  buys.forEach(b => {
+    tl += '<div class="tick" style="left:' + pos(b.at) + '">' +
+          (labelTicks ? '<span>#' + (b.i + 1) + '</span>' : '') + '<b></b></div>';
+  });
+  tl += '<div class="yr" style="left:' + pos(12) + '"><span>M12 · term</span></div>';
+  [0, 6, 18, 24].forEach(x => { tl += '<div class="mlab" style="left:' + pos(x) + '">M' + x + '</div>'; });
+  tl += '</div>';
+
+  const shown = buys.slice(0, 10);
+  const rows = shown.map(b =>
+    '<tr class="' + (b.at >= TERM_MONTHS ? 'y2' : '') + '"><td>Purchase ' + (b.i + 1) + (b.i === 0 ? ' · today' : '') + '</td>' +
+      '<td>Month ' + mo(b.at) + '</td><td>' + fmtDate(dateAt(b.at)) + '</td>' +
+      '<td>' + int(t.dcu) + '</td><td>' + money(r.net) + '</td>' +
+      '<td>' + (expires ? 'expires ' + fmtDate(dateAt(b.at + TERM_MONTHS)) + ' · ' + int(r.wasted) + ' unused'
+                        : fmtDate(dateAt(b.end))) + '</td></tr>').join('');
+  const more = buys.length > shown.length
+    ? '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint)">…and every ' + moLabel(r.cycle) +
+      ' thereafter (' + (buys.length - shown.length) + ' more in the first 24 months)</td></tr>' : '';
+
+  host.innerHTML =
+    '<div class="rh"><span class="ri"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>' +
+      '<span class="rt">Re-buy plan — Tier ' + t.t + ' every ' + moLabel(r.cycle) + '</span>' +
+      '<span class="rc2">' + (expires ? 'Renew on anniversary' : 'Trigger at ~' + int(trigger) + ' units left') + '</span></div>' +
+    '<div class="rbody">' +
+      (expires
+        ? 'Buy <b>' + int(t.dcu) + ' units</b> today and renew on each 12-month anniversary. At ' + int(r.monthly) +
+          ' units a month only ' + int(r.monthly * TERM_MONTHS) + ' are drawn per term, so <b>' + int(r.wasted) +
+          ' units expire</b> at each renewal — already priced into the figures above.'
+        : '<b>Retrigger the purchase every ' + moLabel(r.cycle) + '</b> (\u2248 ' + int(r.cycle * DAYS_PER_MONTH) +
+          ' days), when the balance is close to empty. At ' + int(r.monthly) + ' units a month, set a utilisation alert at ' +
+          '<b>about ' + int(trigger) + ' units remaining</b> — roughly one month of burn — so the next lot is in place ' +
+          'before the pool runs dry; any gap bills at pay-as-you-go. Each lot carries its own 12-month term from its ' +
+          'purchase date, and at this burn it is used up in ' + moLabel(r.lasts) + ', so nothing expires.') +
+      (r.bundle
+        ? ' <b>Fewer orders:</b> buy <b>' + r.bundle.n + ' × Tier ' + t.t + '</b> (' + int(r.bundle.units) + ' units, ' +
+          money(r.bundle.cost) + ') at once every ' + moLabel(r.bundle.cycle) + ' for exactly the same rate.'
+        : '') +
+    '</div>' + tl +
+    '<div class="tscroll"><table><thead><tr><th>Order</th><th>When</th><th>Target date</th><th>Units</th><th>Cost</th>' +
+      '<th>' + (expires ? 'Term ends' : 'Balance runs out') + '</th></tr></thead><tbody>' + rows + more + '</tbody></table></div>' +
+    '<div class="rfoot"><b>First 12 months:</b> ' + r.buysInYear + ' purchase' + (r.buysInYear > 1 ? 's' : '') + ' = ' +
+      money(r.cashYr1) + ' cash out' +
+      (r.carryUnits > 0.5 ? ', with <b>' + int(r.carryUnits) + ' units</b> (' + moLabel(r.carryUnits / r.monthly) +
+        ' of burn) still in the pool at month 12 and within their term' : '') +
+      '. <b>Prorated 12-month cost:</b> ' + money(m.p3Yr) + ' (' + money(m.p3Yr / 12) + ' / mo). ' +
+      'Dates assume a steady burn from today and today\u2019s tier prices — re-check the rate before each order.</div>';
+}
+
+function renderAltTip(m, has){
+  const host = $('altTip');
+  if (!has){ host.innerHTML = ''; return; }
+  const diff = m.alt.total - m.p3Yr;             // > 0: current mode is cheaper
+  if (Math.abs(diff) < 1) { host.innerHTML = ''; return; }
+
+  const hzLabel = o => o.committed > 0
+    ? TIERS.map((t, i) => o.counts[i] ? o.counts[i] + ' × Tier ' + t.t : null).filter(Boolean).join(' + ') +
+      ' (' + int(o.committed) + ' units) once a year'
+    : 'pay-as-you-go';
+  const rrLabel = o => o.rr ? 'Tier ' + o.rr.tier.t + ' every ' + moLabel(o.rr.cycle) : 'pay-as-you-go';
+
+  let text, target, btn;
+  if (m.runrate){
+    target = 'horizon'; btn = 'Show 12-month plan';
+    text = diff > 0
+      ? 'Versus the 12-month horizon structure — <b>' + hzLabel(m.alt) + '</b> at ' + money(m.alt.total) +
+        ' — re-buying on a run-rate cycle saves <b>' + money(diff) + '</b> a year.'
+      : '<b>The 12-month horizon is cheaper here.</b> ' + hzLabel(m.alt) + ' costs ' + money(m.alt.total) +
+        ', <b>' + money(-diff) + ' less</b> than re-buying on a run-rate cycle.';
+  } else {
+    target = 'runrate'; btn = 'Show run-rate plan';
+    text = diff < 0
+      ? '<b>Run rate is cheaper here.</b> Buying <b>' + rrLabel(m.alt) + '</b> instead works out at ' +
+        money(m.alt.total) + ' a year prorated — <b>' + money(-diff) + ' less</b> than sizing one purchase to twelve months.'
+      : 'A run-rate cycle (' + rrLabel(m.alt) + ') would cost ' + money(m.alt.total) + ' a year prorated — <b>' +
+        money(diff) + ' more</b> than this 12-month structure.';
+  }
+  host.innerHTML = '<span>' + text + '</span><button data-switch="' + target + '">' + btn + '</button>';
+}
+
+function renderBars(m, has){
+  const host = $('bars');
+  if (!has){ host.innerHTML = '<div class="barsub">No scope entered yet — the comparison appears once you add quantities.</div>'; return; }
+
+  const max = Math.max(m.paygoYr, m.p3Yr) || 1;
+  const w = v => (Math.max(0, v) / max * 100).toFixed(2) + '%';
+  const waste = m.committed > 0 && m.opt.wasted > 0 ? m.opt.commitCost * (m.opt.wasted / m.committed) : 0;
+  const over  = m.opt.uncovered * m.blended;
+  const used  = Math.max(0, m.p3Yr - waste - over);
+  const saved = m.paygoYr - m.p3Yr;
+
+  let html =
+    '<div class="barrow"><div class="bl2"><span class="bn">Pay-as-you-go</span>' +
+      '<span class="bv">' + money(m.paygoYr) + '</span></div>' +
+      '<div class="bartrack"><i style="background:var(--s2);width:' + w(m.paygoYr) + '"></i></div>' +
+      '<div class="barsub">All ' + money(m.listYr) + ' of list consumption metered at full list price</div></div>' +
+
+    '<div class="barrow"><div class="bl2"><span class="bn">Pre-Purchase Plan' + (m.rr ? ' · run rate' : '') + '</span>' +
+      '<span class="bv">' + money(m.p3Yr) + '</span></div>' +
+      '<div class="bartrack">' +
+        '<i style="background:var(--s4);width:' + w(used) + '"></i>' +
+        '<i class="unused" style="width:' + w(waste) + '"></i>' +
+        '<i style="background:var(--s2);width:' + w(over) + '"></i></div>' +
+      '<div class="barsub">' + (used > 0 ? money(used) + ' of commit consumed' +
+          (m.rr && m.rr.lasts <= TERM_MONTHS ? ' (prorated — Tier ' + m.rr.tier.t + ' re-bought every ' + moLabel(m.rr.cycle) + ')' : '')
+        : 'no commitment') +
+        (waste > 0 ? ' · ' + money(waste) + ' unused and expiring' : '') +
+        (over  > 0 ? ' · ' + money(over)  + ' settled at pay-as-you-go' : '') + '</div></div>';
+
+  // Savings drawn right-to-left, so it visually "gives back" against the bars above.
+  if (saved > 0.5){
+    html +=
+      '<div class="barrow save"><div class="bl2">' +
+        '<span class="bn"><span class="ar2">&#8592;</span>You keep</span>' +
+        '<span class="bv">' + money(saved) + '</span></div>' +
+        '<div class="bartrack rev"><i class="savefill" style="width:' + w(saved) + '"></i></div>' +
+        '<div class="barsub">' + pct(saved / m.paygoYr) + ' of the pay-as-you-go bill, returned by committing' +
+        (m.committed > 0 ? ' — ' + pct(m.totalDisc) + ' off list on ' + int(m.committed) + ' units' +
+          (m.rr ? ' every ' + moLabel(m.rr.cycle) : '') : '') +
+        '</div></div>';
+  }
+
+  host.innerHTML = html;
+}
+
+function renderLines(m){
+  const tb = $('lineTbl').querySelector('tbody');
+  const active = m.lines.filter(l => l.qty > 0);
+  $('lineCap').textContent = 'annual · ' + state.cur + ' · ' + REGION[state.cur] +
+    (state.cur === 'CAD' ? ' · commit units are USD-denominated' : '');
+
+  if (!active.length){
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink-faint)">No plans selected yet.</td></tr>';
+    return;
+  }
+
+  /* Under P3 every plan draws down at list price, so the commitment can't be
+     attributed to one line. Allocate it by share of list consumption: each line
+     is costed at the blended effective rate, which makes the column sum to the
+     headline saving exactly. A line whose own pay-go discount beats that blended
+     rate shows a negative saving — which is the useful signal. */
+  const p3Rate = m.listYr > 0 ? m.p3Yr / m.listYr : 1;
+  const cell = v => Math.abs(v) < 0.5
+    ? '<td>—</td>'
+    : '<td class="' + (v > 0 ? 'pos' : 'neg') + '">' + (v > 0 ? '+' : '−') + money(Math.abs(v)) + '</td>';
+
+  tb.innerHTML =
+    active.map(l => {
+      const save = l.paygoYr - (l.listYr * p3Rate);
+      return '<tr><td>' + l.s.n + '</td>' +
+        '<td>' + int(l.qty) + '</td>' +
+        '<td>' + moneyPrecise(l.s.p) + '</td>' +
+        '<td>' + money(l.listYr) + '</td>' +
+        '<td>' + money(l.paygoYr) + (l.disc > 0 ? ' <span class="gtag">−' + pct(l.disc) + '</span>' : '') + '</td>' +
+        cell(save) +
+        '<td>' + int(l.listYr) + '</td></tr>';
+    }).join('') +
+    '<tr class="total"><td>Total</td><td></td><td></td><td>' + money(m.listYr) + '</td>' +
+      '<td>' + money(m.paygoYr) + '</td>' + cell(m.saving) +
+      '<td>' + int(m.need) + '</td></tr>';
+}
+
+const FIT_HEAD = {
+  horizon: ['Tier','Commit units','Tier disc.','Commit cost','At pay-go','Unused units','Total / yr','Eff. disc.','vs pay-go'],
+  runrate: ['Tier','Units / buy','Tier disc.','Cost / buy','Lasts','Re-buy every','Unused / yr','Total / yr','Eff. disc.','vs pay-go']
+};
+
+function renderFit(m, has){
+  const tb = $('fitTbl').querySelector('tbody'), hid = $('hidNote');
+  const head = FIT_HEAD[m.runrate ? 'runrate' : 'horizon'];
+  $('fitTbl').querySelector('thead').innerHTML = '<tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr>';
+  if (!has || m.need <= 0){
+    tb.innerHTML = '<tr><td colspan="' + head.length + '" style="text-align:center;color:var(--ink-faint)">Enter a scope to compare tiers.</td></tr>';
+    $('fitCap').textContent = m.runrate ? 'prorated 12-month cost of re-buying each tier' : 'total cost of ownership at each tier';
+    hid.hidden = true;
+    return;
+  }
+  if (m.runrate){ renderFitRunRate(m, tb, hid); return; }
+  $('fitCap').textContent = 'against ' + int(m.need) + ' units of forecast consumption';
+
+  // Only show tiers up to the recommended one plus two. Everything beyond that is
+  // strictly worse and only makes the table harder to read.
+  let topIdx = -1;
+  m.purchases.forEach(p => { topIdx = Math.max(topIdx, TIERS.indexOf(p.tier)); });
+  const cutoff  = Math.min(TIERS.length - 1, (topIdx < 0 ? 0 : topIdx) + 2);
+  const shown   = TIERS.slice(0, cutoff + 1);
+  const hiddenN = TIERS.length - shown.length;
+
+  const rows = [{ label:'No commitment', dcu:0, commit:0, bdisc:null,
+                  uncovered:m.need * m.blended, wasted:0, total:m.need * m.blended }]
+    .concat(shown.map(t => {
+      const commit    = t.price * (1 - p3DiscFor(t));
+      const uncovered = Math.max(0, m.need - t.dcu) * m.blended;
+      return { label:'Tier ' + t.t, dcu:t.dcu, commit, uncovered,
+               bdisc: 1 - (commit / t.dcu),
+               wasted:Math.max(0, t.dcu - m.need), total:commit + uncovered };
+    }));
+
+  const stacked = m.purchases.length > 1 || (m.purchases[0] && m.purchases[0].count > 1);
+  if (stacked){
+    rows.push({ label:m.purchases.map(p => p.count + '× T' + p.tier.t).join(' + '),
+                dcu:m.committed, commit:m.opt.commitCost, bdisc:m.totalDisc,
+                uncovered:m.opt.uncovered * m.blended, wasted:m.opt.wasted, total:m.opt.total });
+  }
+
+  const best = Math.min.apply(null, rows.map(r => r.total));
+  tb.innerHTML = rows.map(r => {
+    const delta   = m.paygoYr - r.total;
+    const effDisc = m.listYr > 0 ? 1 - (r.total / m.listYr) : 0;
+    return '<tr' + (Math.abs(r.total - best) < 1e-6 ? ' class="pick"' : '') + '>' +
+      '<td>' + r.label + '</td>' +
+      '<td>' + (r.dcu ? int(r.dcu) : '—') + '</td>' +
+      '<td class="disc">' + (r.bdisc === null ? '—' : pct(r.bdisc)) + '</td>' +
+      '<td>' + (r.commit ? money(r.commit) : '—') + '</td>' +
+      '<td>' + (r.uncovered > 0.5 ? money(r.uncovered) : '—') + '</td>' +
+      '<td>' + (r.wasted > 0.5 ? int(r.wasted) : '—') + '</td>' +
+      '<td>' + money(r.total) + '</td>' +
+      '<td class="disc">' + pct(effDisc) + '</td>' +
+      '<td class="' + (delta > 0.5 ? 'pos' : (delta < -0.5 ? 'neg' : '')) + '">' +
+        (Math.abs(delta) < 0.5 ? '—' : (delta > 0 ? '+' : '−') + money(Math.abs(delta))) + '</td></tr>';
+  }).join('');
+
+  hid.hidden = hiddenN <= 0;
+  if (hiddenN > 0){
+    hid.textContent = hiddenN + ' larger tier' + (hiddenN > 1 ? 's' : '') +
+      ' hidden — beyond ' + int(shown[shown.length - 1].dcu) +
+      ' units every option over-commits and costs more at this scope.';
+  }
+}
+
+function renderFitRunRate(m, tb, hid){
+  const monthly = m.need / TERM_MONTHS;
+  $('fitCap').textContent = 'burning ' + int(monthly) + ' units a month · prorated to 12 months';
+
+  const pickIdx = m.rr ? TIERS.indexOf(m.rr.tier) : -1;
+  const cutoff  = Math.min(TIERS.length - 1, (pickIdx < 0 ? 0 : pickIdx) + 2);
+  const shown   = m.rrOpt.all.slice(0, cutoff + 1);
+  const hiddenN = TIERS.length - shown.length;
+
+  const rows = [{ label:'No commitment', dcu:0, disc:null, net:0, lasts:null, cycle:null, wasted:0, total:m.paygoYr }]
+    .concat(shown.map(r => ({ label:'Tier ' + r.tier.t, dcu:r.tier.dcu, disc:1 - r.unitNet, net:r.net,
+                              lasts:r.lasts, cycle:r.cycle, wasted:r.wasted, total:r.annual })));
+  const best = m.p3Yr;
+  tb.innerHTML = rows.map(r => {
+    const delta   = m.paygoYr - r.total;
+    const effDisc = m.listYr > 0 ? 1 - (r.total / m.listYr) : 0;
+    const isPick  = r.dcu ? (m.rr && r.dcu === m.rr.tier.dcu) : !m.rr;
+    return '<tr' + (isPick && Math.abs(r.total - best) < 1e-6 ? ' class="pick"' : '') + '>' +
+      '<td>' + r.label + '</td>' +
+      '<td>' + (r.dcu ? int(r.dcu) : '—') + '</td>' +
+      '<td class="disc">' + (r.disc === null ? '—' : pct(r.disc)) + '</td>' +
+      '<td>' + (r.net ? money(r.net) : '—') + '</td>' +
+      '<td>' + (r.lasts === null ? '—' : (r.lasts > TERM_MONTHS ? '> 12 mo' : (r.lasts < 0.1 ? '< 0.1' : mo(r.lasts)) + ' mo')) + '</td>' +
+      '<td>' + (r.cycle === null ? '—' : (r.cycle < 0.1 ? '< 0.1' : mo(r.cycle)) + ' mo') + '</td>' +
+      '<td>' + (r.wasted > 0.5 ? int(r.wasted) : '—') + '</td>' +
+      '<td>' + money(r.total) + '</td>' +
+      '<td class="disc">' + pct(effDisc) + '</td>' +
+      '<td class="' + (delta > 0.5 ? 'pos' : (delta < -0.5 ? 'neg' : '')) + '">' +
+        (Math.abs(delta) < 0.5 ? '—' : (delta > 0 ? '+' : '−') + money(Math.abs(delta))) + '</td></tr>';
+  }).join('');
+
+  hid.hidden = hiddenN <= 0;
+  if (hiddenN > 0){
+    hid.textContent = hiddenN + ' larger tier' + (hiddenN > 1 ? 's' : '') +
+      ' hidden — they cost more at this burn, because units would expire before they are consumed.';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CONTROLS
+   ════════════════════════════════════════════════════════════════════ */
+function syncQtyInputs(){
+  document.querySelectorAll('[data-q]').forEach(i => { i.value = state.qty[i.dataset.q] || 0; });
+}
+function rebuildUnitLabels(){
+  INPUTS.forEach(s => {
+    const el = document.querySelector('[data-row="' + s.id + '"] .u em');
+    if (el) el.textContent = unitLabel(s);
+  });
+  explorer.redraw();
+}
+
+function setCurrency(c){
+  state.cur = c;
+  document.querySelectorAll('#curMode .curcard').forEach(x => x.classList.toggle('on', x.dataset.cur === c));
+  const ctl = $('curCtl');
+  ctl.classList.remove('cad', 'usa');
+  void ctl.offsetWidth;                       // restart the pop-in animation
+  ctl.classList.add(c === 'CAD' ? 'cad' : 'usa');
+  rebuildUnitLabels();
+  refresh();
+}
+
+function setOptMode(mode){
+  state.optMode = mode === 'runrate' ? 'runrate' : 'horizon';
+  document.querySelectorAll('#optMode button').forEach(b => {
+    const on = b.dataset.opt === state.optMode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  refresh();
+}
+
+function setSource(live, detail){
+  state.live = live;
+  $('srcDot').style.background = live ? 'var(--s1)' : 'var(--s5)';
+  $('srcTitle').textContent = live ? 'Live rate from Azure' : 'Built-in rate';
+  $('srcSub').textContent = detail || (live
+    ? 'Read from the Azure pricing page'
+    : 'Azure published rate, verified ' + PRICE_STAMP);
+}
+
+function bindControls(){
+  $('curMode').addEventListener('click', e => {
+    const b = e.target.closest('.curcard[data-cur]'); if (!b) return;
+    setCurrency(b.dataset.cur);
+  });
+
+  $('optMode').addEventListener('click', e => {
+    const b = e.target.closest('button[data-opt]'); if (!b) return;
+    setOptMode(b.dataset.opt);
+  });
+  $('altTip').addEventListener('click', e => {
+    const b = e.target.closest('button[data-switch]'); if (!b) return;
+    setOptMode(b.dataset.switch);
+  });
+
+  $('fxRate')    .addEventListener('input', e => {
+    state.fx = clamp(num(e.target.value) || AZURE_FX, 0.1, 10);
+    rebuildUnitLabels(); refresh();
+  });
+
+  $('btnSample').addEventListener('click', () => {
+    INPUTS.forEach(s => { state.qty[s.id] = SAMPLE[s.id] || 0; });
+    syncQtyInputs(); openGroupsWithValues(); refresh();
+    $('s5').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  $('btnClear').addEventListener('click', () => {
+    INPUTS.forEach(s => { state.qty[s.id] = 0; });
+    syncQtyInputs(); refresh();
+  });
+  $('btnExpand').addEventListener('click', () => setAllGroups(state.open.size !== FAMS.length));
+
+  $('btnLive').addEventListener('click', () => fetchLivePricing(false));
+}
+
+/* ── live conversion rate ────────────────────────────────────────────
+   The Azure pricing page carries its own currency table in the page source:
+     "cad":{ ... "modernConversion":1.38605 ... }
+   That figure is what renders as "1 USD = 1.386 CAD" at the top of the page,
+   and it is the rate Azure actually bills Canadian customers at for the month.
+
+   Neither azure.microsoft.com nor the Retail Prices API (prices.azure.com) sends
+   an Access-Control-Allow-Origin header, so a browser cannot read them directly
+   from a local file. The page is therefore requested through read-only public
+   relays that do add CORS headers. All routes race in parallel and the first one
+   that returns a parsable rate wins, so one slow or blocked relay can't stall the
+   check. Only the public Microsoft pricing URL is ever requested. */
+const PRICING_PAGE = 'https://azure.microsoft.com/en-us/pricing/details/defender-for-cloud/';
+const RATE_ROUTES = [
+  /* Jina Reader relays the fetched page; X-Return-Format:html returns the raw
+     source (including the currency table) rather than a markdown summary. */
+  { name:'r.jina.ai relay',     url:() => 'https://r.jina.ai/' + PRICING_PAGE,
+    headers:{ 'X-Return-Format':'html' } },
+  { name:'allorigins relay',    url:() => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(PRICING_PAGE) },
+  { name:'allorigins relay',    url:() => 'https://api.allorigins.win/get?url=' + encodeURIComponent(PRICING_PAGE),
+    json:'contents' },
+  { name:'codetabs relay',      url:() => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(PRICING_PAGE) },
+  { name:'corsproxy.io relay',  url:() => 'https://corsproxy.io/?url=' + encodeURIComponent(PRICING_PAGE) }
+];
+const RATE_TIMEOUT_MS = 30000;
+
+function parseRate(html, code){
+  // Relays sometimes hand back the source JSON-escaped (\"cad\":{...}); normalise first.
+  const src = html.indexOf('\\"modernConversion') >= 0 ? html.replace(/\\"/g, '"') : html;
+  // "cad":{...,"modernConversion":1.3860499...} — tolerate key reordering
+  const block = new RegExp('"' + code + '"\\s*:\\s*\\{[^{}]*\\}', 'i').exec(src);
+  if (!block) return null;
+  const m = /"modernConversion"\s*:\s*([\d.]+)/i.exec(block[0]);
+  const v = m ? parseFloat(m[1]) : NaN;
+  return isFinite(v) && v > 0.5 && v < 3 ? v : null;       // CAD per USD sanity band
+}
+
+async function tryRoute(route){
+  const opts = { cache:'no-store', credentials:'omit' };
+  if (route.headers) opts.headers = route.headers;
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), RATE_TIMEOUT_MS) : null;
+  if (ctl) opts.signal = ctl.signal;
+  try {
+    const res = await fetch(route.url(), opts);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    let body = await res.text();
+    if (route.json){ body = (JSON.parse(body) || {})[route.json] || ''; }
+    const rate = parseRate(body, 'cad');
+    if (!rate) throw new Error('rate not found in page');
+    return { rate, route };
+  } finally { if (timer) clearTimeout(timer); }
+}
+
+function firstSuccess(promises){
+  // Promise.any, with a fallback for older engines.
+  if (Promise.any) return Promise.any(promises);
+  return new Promise((resolve, reject) => {
+    let left = promises.length;
+    promises.forEach(p => p.then(resolve, () => { if (--left === 0) reject(new Error('all routes failed')); }));
+  });
+}
+
+async function fetchLivePricing(auto){
+  const btn = $('btnLive'), note = $('liveNote'), lbl = btn.querySelector('.lb');
+  btn.classList.add('busy'); btn.disabled = true; lbl.textContent = 'Checking\u2026';
+  note.className = 'fxnote'; note.textContent = 'Reading the Azure pricing page\u2026';
+
+  try {
+    const { rate, route } = await firstSuccess(RATE_ROUTES.map(tryRoute));
+    const shown = +rate.toFixed(5);
+    const prev  = state.fx;
+    state.fx = shown;
+    $('fxRate').value = shown;
+    setSource(true, 'Azure pricing page · ' + route.name + ' · ' +
+      new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }));
+    note.className = 'fxnote ok';
+    note.textContent = 'Live from the Azure pricing page: 1 USD = ' + rate.toFixed(3) +
+      ' CAD (' + shown + ' at full precision). This is Azure\u2019s published rate for the current month, ' +
+      'not a live market rate.' +
+      (Math.abs(prev - shown) > 1e-6 ? ' Updated from ' + prev + '.' : '');
+    rebuildUnitLabels(); refresh();
+    lbl.textContent = 'Re-check rate';
+  } catch (err) {
+    note.className = 'fxnote err';
+    note.textContent = (auto ? 'Automatic check could not reach' : 'Could not reach') +
+      ' the Azure pricing page \u2014 usually a network policy blocking the request. The built-in rate from ' +
+      PRICE_STAMP + ' (' + AZURE_FX + ') is in use; you can also read "1 USD = x CAD" from the top of the ' +
+      'pricing page and type it in above.';
+    lbl.textContent = 'Retry';
+  }
+  btn.classList.remove('busy'); btn.disabled = false;
+}
+/* ════════════════════════════════════════════════════════════════════
+   CHROME
+   ════════════════════════════════════════════════════════════════════ */
+function bindChrome(){
+  const secs = Array.prototype.slice.call(document.querySelectorAll('section.sec'));
+  const rail = $('rail');
+  rail.innerHTML = secs.map((s, i) =>
+    '<button data-go="' + s.id + '" style="--rc:' + (s.style.getPropertyValue('--c') || 'var(--ink)') + '">' +
+    '<span class="dot">' + (i + 1) + '</span><span class="lbl">' + s.dataset.rail + '</span></button>').join('');
+  rail.addEventListener('click', e => {
+    const b = e.target.closest('[data-go]'); if (!b) return;
+    $(b.dataset.go).scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+
+  const io = new IntersectionObserver(es => {
+    es.forEach(en => { if (en.isIntersecting) en.target.classList.add('in'); });
+  }, { threshold:0.06 });
+  secs.forEach(s => io.observe(s));
+
+  const btns = Array.prototype.slice.call(rail.querySelectorAll('button'));
+  const onScroll = () => {
+    const y = window.scrollY, doc = document.documentElement;
+    $('minibar').classList.toggle('show', y > 420);
+    const range = doc.scrollHeight - doc.clientHeight;
+    $('mbProg').style.width = (range > 0 ? Math.min(100, y / range * 100) : 0) + '%';
+    let act = 0;
+    secs.forEach((s, i) => { if (s.getBoundingClientRect().top < window.innerHeight * 0.42) act = i; });
+    btns.forEach((b, i) => b.classList.toggle('active', i === act));
+  };
+  window.addEventListener('scroll', onScroll, { passive:true });
+  onScroll();
+}
+
+/* ── boot ───────────────────────────────────────────────────────── */
+explorer.redraw();
+buildGroups();
+buildTierRef();
+bindControls();
+bindChrome();
+syncExpandBtn();
+setSource(false);
+setCurrency(state.cur);          // CAD by default, at Azure's published rate
+refresh();
+fetchLivePricing(true);       // pull this month's Azure CAD rate on load
+</script>
+</body>
+</html>
